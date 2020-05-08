@@ -13,12 +13,13 @@ package com.tp.tools.function;
 import java.util.NoSuchElementException;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public abstract class Either<L, R> {
 
   public <V> Either<L, V> map(final Function<R, V> mapper) {
     if (isRight()) {
-      return Either.right(right().andThen(mapper));
+      return Either.right(() -> mapper.apply(right().get()));
     } else {
       @SuppressWarnings("unchecked") final Either<L, V> that = (Either<L, V>) this;
       return that;
@@ -27,7 +28,7 @@ public abstract class Either<L, R> {
 
   public <V> Either<L, V> flatMap(final Function<R, Either<L, V>> mapper) {
     if (isRight()) {
-      return Either.right(right().andThen(mapper).get().right());
+      return Either.right(() -> mapper.apply(right().get()).right().get());
     } else {
       @SuppressWarnings("unchecked") final Either<L, V> that = (Either<L, V>) this;
       return that;
@@ -36,7 +37,7 @@ public abstract class Either<L, R> {
 
   public <K> Either<K, R> mapLeft(final Function<L, K> mapper) {
     if (isLeft()) {
-      return Either.left(left().andThen(mapper));
+      return Either.left(() -> mapper.apply(left().get()));
     } else {
       @SuppressWarnings("unchecked") final Either<K, R> that = (Either<K, R>) this;
       return that;
@@ -45,7 +46,7 @@ public abstract class Either<L, R> {
 
   public <K> Either<K, R> flatMapLeft(final Function<L, Either<K, R>> mapper) {
     if (isLeft()) {
-      return Either.left(left().andThen(mapper).get().left());
+      return Either.left(() -> mapper.apply(left().get()).left().get());
     } else {
       @SuppressWarnings("unchecked") final Either<K, R> that = (Either<K, R>) this;
       return that;
@@ -62,10 +63,11 @@ public abstract class Either<L, R> {
 
   public Either<L, R> peek(final Consumer<R> consumer) {
     if (isRight()) {
-      return Either.right(right().andThen(value -> {
+      return Either.right(() -> {
+        final var value = right().get();
         consumer.accept(value);
         return value;
-      }));
+      });
     } else {
       return this;
     }
@@ -73,10 +75,11 @@ public abstract class Either<L, R> {
 
   public Either<L, R> peekLeft(final Consumer<L> consumer) {
     if (isLeft()) {
-      return Either.left(left().andThen(value -> {
+      return Either.left(() -> {
+        final var value = left().get();
         consumer.accept(value);
         return value;
-      }));
+      });
     } else {
       return this;
     }
@@ -124,11 +127,11 @@ public abstract class Either<L, R> {
     return !isLeft();
   }
 
-  protected abstract FunctionalSupplier<R> right();
+  protected abstract Supplier<R> right();
 
-  protected abstract FunctionalSupplier<L> left();
+  protected abstract Supplier<L> left();
 
-  public static <L, R> Either<L, R> right(final FunctionalSupplier<R> supplier) {
+  public static <L, R> Either<L, R> right(final Supplier<R> supplier) {
     return new Right<>(supplier);
   }
 
@@ -136,7 +139,7 @@ public abstract class Either<L, R> {
     return right(() -> value);
   }
 
-  public static <L, R> Either<L, R> left(final FunctionalSupplier<L> supplier) {
+  public static <L, R> Either<L, R> left(final Supplier<L> supplier) {
     return new Left<>(supplier);
   }
 
@@ -146,9 +149,9 @@ public abstract class Either<L, R> {
 
   public static class Right<L, R> extends Either<L, R> {
 
-    private final FunctionalSupplier<R> right;
+    private final Supplier<R> right;
 
-    public Right(final FunctionalSupplier<R> right) {
+    public Right(final Supplier<R> right) {
       this.right = right;
     }
 
@@ -168,21 +171,21 @@ public abstract class Either<L, R> {
     }
 
     @Override
-    protected FunctionalSupplier<R> right() {
+    protected Supplier<R> right() {
       return right;
     }
 
     @Override
-    protected FunctionalSupplier<L> left() {
+    protected Supplier<L> left() {
       throw new NoSuchElementException("Cannot get left supplier from Either.Right instance.");
     }
   }
 
   public static class Left<L, R> extends Either<L, R> {
 
-    private final FunctionalSupplier<L> left;
+    private final Supplier<L> left;
 
-    public Left(final FunctionalSupplier<L> left) {
+    public Left(final Supplier<L> left) {
       this.left = left;
     }
 
@@ -202,12 +205,12 @@ public abstract class Either<L, R> {
     }
 
     @Override
-    protected FunctionalSupplier<R> right() {
+    protected Supplier<R> right() {
       throw new NoSuchElementException("Cannot get right supplier from Either.Left instance.");
     }
 
     @Override
-    protected FunctionalSupplier<L> left() {
+    protected Supplier<L> left() {
       return left;
     }
   }
