@@ -147,7 +147,7 @@ public abstract class Either<L, R> {
     return left(() -> value);
   }
 
-  public static class Right<L, R> extends Either<L, R> {
+  private static class Right<L, R> extends Either<L, R> {
 
     private final Supplier<R> right;
 
@@ -181,7 +181,7 @@ public abstract class Either<L, R> {
     }
   }
 
-  public static class Left<L, R> extends Either<L, R> {
+  private static class Left<L, R> extends Either<L, R> {
 
     private final Supplier<L> left;
 
