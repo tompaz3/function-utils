@@ -100,15 +100,15 @@ public interface FluentChain<K, T> {
         (BiFunction<T, V, T>) (chain, value) -> mapper.apply(chain), valueSupplier);
   }
 
-  default <V> ApplyIfMapper<K, T, V> applyIf(final BiFunction<T, V, T> mapper) {
-    return new ApplyIfMapper<>(this, mapper);
+  default <V> ApplyIfMapperChain<K, T, V> apply(final BiFunction<T, V, T> mapper) {
+    return new ApplyIfMapperChain<>(this, mapper);
   }
 
-  default <V> ApplyIfMapper<K, T, V> applyIf(final Function<T, T> mapper) {
-    return applyIf((chain, value) -> mapper.apply(chain));
+  default <V> ApplyIfMapperChain<K, T, V> apply(final Function<T, T> mapper) {
+    return apply((chain, value) -> mapper.apply(chain));
   }
 
-  default <V> FluentChain<K, T> applyIf(final ApplyIf<K, T, V> applyIf) {
+  default <V> FluentChain<K, T> applyIf(final ApplyIf<T, V> applyIf) {
     return map(chain -> FluentChain.<Supplier<V>, V>of(Supplier::get)
         .map(value -> applyIf.predicate.test(value)
             ? applyIf.mapper.apply(chain, value)
@@ -127,78 +127,95 @@ public interface FluentChain<K, T> {
 
   interface FluentSingleChain<T> extends FluentChain<T, T> {}
 
-  class ApplyIfMapper<K, T, V> {
+  class ApplyIfMapperChain<K, T, V> {
 
     private final FluentChain<K, T> chain;
     private final BiFunction<T, V, T> mapper;
 
-    private ApplyIfMapper(final FluentChain<K, T> chain, final BiFunction<T, V, T> mapper) {
+    private ApplyIfMapperChain(final FluentChain<K, T> chain, final BiFunction<T, V, T> mapper) {
       this.chain = chain;
       this.mapper = mapper;
     }
 
-    public ApplyIfValue<K, T, V> value(final Supplier<V> valueSupplier) {
-      return new ApplyIfValue<>(chain, mapper, valueSupplier);
+    public ApplyIfValueChain<K, T, V> ifValue(final Supplier<V> valueSupplier) {
+      return new ApplyIfValueChain<>(chain, mapper, valueSupplier);
     }
 
-    public ApplyIfValue<K, T, V> value(final V value) {
-      return new ApplyIfValue<>(chain, mapper, () -> value);
+    public ApplyIfValueChain<K, T, V> ifValue(final V value) {
+      return new ApplyIfValueChain<>(chain, mapper, () -> value);
     }
   }
 
-  class ApplyIfValue<K, T, V> {
+  class ApplyIfValueChain<K, T, V> {
 
     private final FluentChain<K, T> chain;
     private final BiFunction<T, V, T> mapper;
     private final Supplier<V> valueSupplier;
 
-    private ApplyIfValue(final FluentChain<K, T> chain, final BiFunction<T, V, T> mapper,
+    private ApplyIfValueChain(final FluentChain<K, T> chain, final BiFunction<T, V, T> mapper,
         final Supplier<V> valueSupplier) {
       this.chain = chain;
       this.mapper = mapper;
       this.valueSupplier = valueSupplier;
     }
 
-    public ApplyIf<K, T, V> predicate(final Predicate<V> predicate) {
-      return new ApplyIf<>(chain, mapper, valueSupplier, predicate);
+    public FluentChain<K, T> is(final Predicate<V> predicate) {
+      return chain.applyIf(new ApplyIf<>(mapper, valueSupplier, predicate));
     }
   }
 
-  class ApplyIf<K, T, V> {
+  class ApplyIf<T, V> {
 
-    private final FluentChain<K, T> chain;
     private final BiFunction<T, V, T> mapper;
     private final Supplier<V> valueSupplier;
     private final Predicate<V> predicate;
 
-    public ApplyIf(final FluentChain<K, T> chain, final BiFunction<T, V, T> mapper,
+    private ApplyIf(final BiFunction<T, V, T> mapper,
         final Supplier<V> valueSupplier, final Predicate<V> predicate) {
-      this.chain = chain;
       this.mapper = mapper;
       this.valueSupplier = valueSupplier;
       this.predicate = predicate;
     }
 
-    public FluentChain<K, T> apply() {
-      return apply(chain);
+    public static <T, V> ApplyIfMapper<T, V> apply(final BiFunction<T, V, T> mapper) {
+      return new ApplyIfMapper<>(mapper);
     }
 
-    private FluentChain<K, T> apply(final FluentChain<K, T> chain) {
-      return chain.applyIf(this);
+    public static <T, V> ApplyIfMapper<T, V> apply(final Function<T, T> mapper) {
+      return new ApplyIfMapper<>((chain, value) -> mapper.apply(chain));
+    }
+  }
+
+  class ApplyIfMapper<T, V> {
+
+    private final BiFunction<T, V, T> mapper;
+
+    private ApplyIfMapper(final BiFunction<T, V, T> mapper) {
+      this.mapper = mapper;
     }
 
-    /*
-     * This is just some concept, most likely will require some breaking changes.
-     */
-//    public FluentChain<K, T> applyOrElse(final ApplyIf<K, T, V> applyIf) {
-//      return chain.flatMap(b -> ((Function<Supplier<V>, V>) Supplier::get)
-//          .andThen(value -> Optional.ofNullable(value).filter(predicate)
-//              .map(v -> mapper.apply(b, v))
-//              .map(ignore -> chain)
-//              .orElseGet(() -> applyIf.apply(chain))
-//          )
-//          .apply(valueSupplier)
-//      );
-//    }
+    public ApplyIfValue<T, V> ifValue(final Supplier<V> valueSupplier) {
+      return new ApplyIfValue<>(mapper, valueSupplier);
+    }
+
+    public ApplyIfValue<T, V> ifValue(final V value) {
+      return new ApplyIfValue<>(mapper, () -> value);
+    }
+  }
+
+  class ApplyIfValue<T, V> {
+
+    private final BiFunction<T, V, T> mapper;
+    private final Supplier<V> valueSupplier;
+
+    private ApplyIfValue(final BiFunction<T, V, T> mapper,
+        final Supplier<V> valueSupplier) {
+      this.mapper = mapper;
+      this.valueSupplier = valueSupplier;
+    }
+
+    public ApplyIf<T, V> is(final Predicate<V> predicate) {
+      return new ApplyIf<>(mapper, valueSupplier, predicate);
+    }
   }
 }
