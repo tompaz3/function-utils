@@ -29,6 +29,7 @@ package com.tp.tools.function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.tp.tools.function.FluentChain.ApplyIf;
 import com.tp.tools.function.FluentChainBuilderTestData.Car;
 import com.tp.tools.function.FluentChainBuilderTestData.CarBuilder;
 import com.tp.tools.function.FluentChainBuilderTestData.Make;
@@ -85,14 +86,12 @@ class FluentChainTest {
     // @formatter:off
     // when
     final var car = FluentChain.<CarBuilder>ofSingle(builder -> builder.make(make))
-        .applyIf(CarBuilder::model)
-          .value(model)
-          .predicate(yaris::equals)
-          .apply()
-        .<Integer>applyIf(CarBuilder::sold)
-          .value(soldInt)
-          .predicate(soldPredicate)
-          .apply()
+        .applyIf(ApplyIf.apply(CarBuilder::model)
+          .ifValue(model)
+          .is(yaris::equals))
+        .<Integer>apply(CarBuilder::sold)
+          .ifValue(soldInt)
+          .is(soldPredicate)
         .applyIfNotNull(CarBuilder::productionYear, productionYear)
         .applyIfPresent(CarBuilder::towBar, towBar)
         .chain(Car::builder)
