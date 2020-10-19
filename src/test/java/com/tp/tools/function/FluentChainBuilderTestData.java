@@ -39,37 +39,47 @@ class FluentChainBuilderTestData {
     private final Model model;
     private final ProductionYear productionYear;
     private final TowBar towBar;
+    private final boolean sold;
 
     private CarBuilder(final Make make, final Model model,
-        final ProductionYear productionYear, final TowBar towBar) {
+        final ProductionYear productionYear, final TowBar towBar, final boolean sold) {
       this.make = make;
       this.model = model;
       this.productionYear = productionYear;
       this.towBar = towBar;
+      this.sold = sold;
     }
 
     public CarBuilder make(final Make make) {
-      return new CarBuilder(requireNonNull(make), this.model, this.productionYear, this.towBar);
+      return new CarBuilder(requireNonNull(make), this.model, this.productionYear, this.towBar,
+          this.sold);
     }
 
     public CarBuilder model(final Model model) {
-      return new CarBuilder(this.make, requireNonNull(model), this.productionYear, this.towBar);
+      return new CarBuilder(this.make, requireNonNull(model), this.productionYear, this.towBar,
+          this.sold);
     }
 
     public CarBuilder productionYear(final ProductionYear productionYear) {
-      return new CarBuilder(this.make, this.model, requireNonNull(productionYear), this.towBar);
+      return new CarBuilder(this.make, this.model, requireNonNull(productionYear), this.towBar,
+          this.sold);
     }
 
     public CarBuilder towBar(final TowBar towBar) {
-      return new CarBuilder(this.make, this.model, this.productionYear, requireNonNull(towBar));
+      return new CarBuilder(this.make, this.model, this.productionYear, requireNonNull(towBar),
+          this.sold);
+    }
+
+    public CarBuilder sold() {
+      return new CarBuilder(this.make, this.model, this.productionYear, this.towBar, true);
     }
 
     Car build() {
-      return new Car(make, model, productionYear, towBar);
+      return new Car(make, model, productionYear, towBar, sold);
     }
 
     private CarBuilder() {
-      this(null, null, null, null);
+      this(null, null, null, null, false);
     }
   }
 
@@ -79,13 +89,15 @@ class FluentChainBuilderTestData {
     private final Model model;
     private final ProductionYear productionYear;
     private final TowBar towBar;
+    private final boolean sold;
 
     Car(final Make make, final Model model,
-        final ProductionYear productionYear, final TowBar towBar) {
+        final ProductionYear productionYear, final TowBar towBar, final boolean sold) {
       this.make = make;
       this.model = model;
       this.productionYear = productionYear;
       this.towBar = towBar;
+      this.sold = sold;
     }
 
     @Override
@@ -100,12 +112,13 @@ class FluentChainBuilderTestData {
       return Objects.equals(make, car.make) &&
           Objects.equals(model, car.model) &&
           Objects.equals(productionYear, car.productionYear) &&
-          Objects.equals(towBar, car.towBar);
+          Objects.equals(towBar, car.towBar) &&
+          Objects.equals(sold, car.sold);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(make, model, productionYear, towBar);
+      return Objects.hash(make, model, productionYear, towBar, sold);
     }
 
     public static CarBuilder builder() {

@@ -38,6 +38,7 @@ import com.tp.tools.function.FluentChainBuilderTestData.TowBar;
 import com.tp.tools.function.FluentChainBuilderTestData.YesNo;
 import java.time.Year;
 import java.util.Optional;
+import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
 class FluentChainTest {
@@ -49,6 +50,7 @@ class FluentChainTest {
     final Model model = new Model("Yaris");
     final ProductionYear productionYear = new ProductionYear(Year.now().getValue());
     final TowBar towBar = new TowBar(YesNo.NO);
+    final boolean sold = false;
 
     // when
     final var car = FluentChain.<CarBuilder>ofSingle(builder -> builder.make(make))
@@ -63,7 +65,9 @@ class FluentChainTest {
         .hasFieldOrPropertyWithValue("make", make)
         .hasFieldOrPropertyWithValue("model", model)
         .hasFieldOrPropertyWithValue("productionYear", productionYear)
-        .hasFieldOrPropertyWithValue("towBar", towBar);
+        .hasFieldOrPropertyWithValue("towBar", towBar)
+        .hasFieldOrPropertyWithValue("sold", sold)
+    ;
   }
 
   @Test
@@ -74,14 +78,21 @@ class FluentChainTest {
     final Model model = new Model("911");
     final ProductionYear productionYear = null;
     final Optional<TowBar> towBar = Optional.of(new TowBar(YesNo.YES));
+    final boolean sold = true;
+    final int soldInt = 1;
+    final Predicate<Integer> soldPredicate = integer -> integer == 1;
 
     // @formatter:off
     // when
     final var car = FluentChain.<CarBuilder>ofSingle(builder -> builder.make(make))
         .applyIf(CarBuilder::model)
-        .value(model)
-        .predicate(yaris::equals)
-        .apply()
+          .value(model)
+          .predicate(yaris::equals)
+          .apply()
+        .<Integer>applyIf(CarBuilder::sold)
+          .value(soldInt)
+          .predicate(soldPredicate)
+          .apply()
         .applyIfNotNull(CarBuilder::productionYear, productionYear)
         .applyIfPresent(CarBuilder::towBar, towBar)
         .chain(Car::builder)
@@ -93,7 +104,9 @@ class FluentChainTest {
         .hasFieldOrPropertyWithValue("make", make)
         .hasFieldOrPropertyWithValue("model", null)
         .hasFieldOrPropertyWithValue("productionYear", null)
-        .hasFieldOrPropertyWithValue("towBar", towBar.get());
+        .hasFieldOrPropertyWithValue("towBar", towBar.get())
+        .hasFieldOrPropertyWithValue("sold", sold)
+    ;
   }
 
 }

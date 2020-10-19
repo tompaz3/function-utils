@@ -58,6 +58,12 @@ public interface FluentChain<K, T> {
         .orElse(chain));
   }
 
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+  default <V> FluentChain<K, T> applyIfPresent(final Function<T, T> mapper,
+      final Optional<V> value) {
+    return applyIfPresent((chain, v) -> mapper.apply(chain), value);
+  }
+
   default <V> FluentChain<K, T> applyIfPresent(final BiFunction<T, V, T> mapper,
       final Supplier<Optional<V>> valueSupplier) {
     return map(chain -> ((Function<Supplier<Optional<V>>, Optional<V>>) Supplier::get)
@@ -67,8 +73,17 @@ public interface FluentChain<K, T> {
     );
   }
 
+  default <V> FluentChain<K, T> applyIfPresent(final Function<T, T> mapper,
+      final Supplier<Optional<V>> valueSupplier) {
+    return applyIfPresent((chain, value) -> mapper.apply(chain), valueSupplier);
+  }
+
   default <V> FluentChain<K, T> applyIfNotNull(final BiFunction<T, V, T> mapper, final V value) {
     return map(chain -> nonNull(value) ? mapper.apply(chain, value) : chain);
+  }
+
+  default <V> FluentChain<K, T> applyIfNotNull(final Function<T, T> mapper, final V value) {
+    return applyIfNotNull((chain, v) -> mapper.apply(chain), value);
   }
 
   default <V> FluentChain<K, T> applyIfNotNull(final BiFunction<T, V, T> mapper,
@@ -79,8 +94,18 @@ public interface FluentChain<K, T> {
     );
   }
 
+  default <V> FluentChain<K, T> applyIfNotNull(final Function<T, T> mapper,
+      final Supplier<V> valueSupplier) {
+    return applyIfNotNull(
+        (BiFunction<T, V, T>) (chain, value) -> mapper.apply(chain), valueSupplier);
+  }
+
   default <V> ApplyIfMapper<K, T, V> applyIf(final BiFunction<T, V, T> mapper) {
     return new ApplyIfMapper<>(this, mapper);
+  }
+
+  default <V> ApplyIfMapper<K, T, V> applyIf(final Function<T, T> mapper) {
+    return applyIf((chain, value) -> mapper.apply(chain));
   }
 
   default <V> FluentChain<K, T> applyIf(final ApplyIf<K, T, V> applyIf) {

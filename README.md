@@ -23,6 +23,9 @@ Customer fetchCustomer(PersonId id) {
   if(person.getAddress() != null) {
     builder = builder.address(person.getAddress());
   }
+  if(Period.between(person.getDateOfBirth(), LocalDate.now()).getYears() < ADULT_AGE) {
+    builder = builder.minorAge();
+  }
   return person.getContact()  // Optional
     .map(builder::contact)
     .orElse(builder)
@@ -40,6 +43,10 @@ Customer fetchCustomer(PersonId id) {
   .map(builder -> builder.lastName(person.getLastName()))
   .applyIfNotNull(CustomerBuilder::address, person::getAddress)
   .applyIfPresent(CustomerBuilder::contact, person::getContact)
+  .<Integer>applyIf(CustomerBuilder::minorAge)
+    .value(() -> Period.between(person.getDateOfBirth(), LocalDate.now()).getYears())
+    .predicate(age -> age < ADULT_AGE)
+    .apply()
   .chain(Customer::builder)
   .build();
 }
