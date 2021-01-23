@@ -28,12 +28,14 @@
 package com.tp.tools.function;
 
 import static java.util.Objects.nonNull;
+import static lombok.AccessLevel.PRIVATE;
 
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
 
 public interface FluentChain<K, T> {
 
@@ -127,15 +129,11 @@ public interface FluentChain<K, T> {
 
   interface FluentSingleChain<T> extends FluentChain<T, T> {}
 
+  @RequiredArgsConstructor(access = PRIVATE)
   class ApplyIfMapperChain<K, T, V> {
 
     private final FluentChain<K, T> chain;
     private final BiFunction<T, V, T> mapper;
-
-    private ApplyIfMapperChain(final FluentChain<K, T> chain, final BiFunction<T, V, T> mapper) {
-      this.chain = chain;
-      this.mapper = mapper;
-    }
 
     public ApplyIfValueChain<K, T, V> ifValue(final Supplier<V> valueSupplier) {
       return new ApplyIfValueChain<>(chain, mapper, valueSupplier);
@@ -146,36 +144,24 @@ public interface FluentChain<K, T> {
     }
   }
 
+  @RequiredArgsConstructor(access = PRIVATE)
   class ApplyIfValueChain<K, T, V> {
 
     private final FluentChain<K, T> chain;
     private final BiFunction<T, V, T> mapper;
     private final Supplier<V> valueSupplier;
 
-    private ApplyIfValueChain(final FluentChain<K, T> chain, final BiFunction<T, V, T> mapper,
-        final Supplier<V> valueSupplier) {
-      this.chain = chain;
-      this.mapper = mapper;
-      this.valueSupplier = valueSupplier;
-    }
-
     public FluentChain<K, T> is(final Predicate<V> predicate) {
       return chain.applyIf(new ApplyIf<>(mapper, valueSupplier, predicate));
     }
   }
 
+  @RequiredArgsConstructor(access = PRIVATE)
   class ApplyIf<T, V> {
 
     private final BiFunction<T, V, T> mapper;
     private final Supplier<V> valueSupplier;
     private final Predicate<V> predicate;
-
-    private ApplyIf(final BiFunction<T, V, T> mapper,
-        final Supplier<V> valueSupplier, final Predicate<V> predicate) {
-      this.mapper = mapper;
-      this.valueSupplier = valueSupplier;
-      this.predicate = predicate;
-    }
 
     public static <T, V> ApplyIfMapper<T, V> apply(final BiFunction<T, V, T> mapper) {
       return new ApplyIfMapper<>(mapper);
@@ -186,13 +172,10 @@ public interface FluentChain<K, T> {
     }
   }
 
+  @RequiredArgsConstructor(access = PRIVATE)
   class ApplyIfMapper<T, V> {
 
     private final BiFunction<T, V, T> mapper;
-
-    private ApplyIfMapper(final BiFunction<T, V, T> mapper) {
-      this.mapper = mapper;
-    }
 
     public ApplyIfValue<T, V> ifValue(final Supplier<V> valueSupplier) {
       return new ApplyIfValue<>(mapper, valueSupplier);
@@ -203,16 +186,11 @@ public interface FluentChain<K, T> {
     }
   }
 
+  @RequiredArgsConstructor(access = PRIVATE)
   class ApplyIfValue<T, V> {
 
     private final BiFunction<T, V, T> mapper;
     private final Supplier<V> valueSupplier;
-
-    private ApplyIfValue(final BiFunction<T, V, T> mapper,
-        final Supplier<V> valueSupplier) {
-      this.mapper = mapper;
-      this.valueSupplier = valueSupplier;
-    }
 
     public ApplyIf<T, V> is(final Predicate<V> predicate) {
       return new ApplyIf<>(mapper, valueSupplier, predicate);

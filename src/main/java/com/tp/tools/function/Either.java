@@ -27,10 +27,13 @@
 
 package com.tp.tools.function;
 
+import static lombok.AccessLevel.PRIVATE;
+
 import java.util.NoSuchElementException;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
 
 public abstract class Either<L, R> {
 
@@ -164,13 +167,10 @@ public abstract class Either<L, R> {
     return left(() -> value);
   }
 
+  @RequiredArgsConstructor(access = PRIVATE)
   private static class Right<L, R> extends Either<L, R> {
 
     private final Supplier<R> right;
-
-    public Right(final Supplier<R> right) {
-      this.right = right;
-    }
 
     @Override
     public R get() {
@@ -198,13 +198,10 @@ public abstract class Either<L, R> {
     }
   }
 
+  @RequiredArgsConstructor(access = PRIVATE)
   private static class Left<L, R> extends Either<L, R> {
 
     private final Supplier<L> left;
-
-    public Left(final Supplier<L> left) {
-      this.left = left;
-    }
 
     @Override
     public R get() {
