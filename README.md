@@ -73,9 +73,9 @@ UserWithAccountsAndHistory findUserWithAccountsAndHistory(UserId id) {
      .execute();
      
    return userWithAccountsAndHistory.onError(UserNotFoundException.class, () -> log.warn("User with id {} not found", id))
+     .onError(exception -> log.error("Could not fetch user with accounts and history for user id {}", id))
      .onErrorThrow(exception -> exception instanceof HttpConnectionException 
             && ((HttpConnectionException)exception).isTimeout(), TimeoutException::new)
-     .onError(exception -> log.error("Could not fetch user with accounts and history for user id {}", id))
      .onSuccess(this::notifyUserAccountsAndHistoryAccessed)
      .fold(exception -> UserWithAccountsAndHistory.none(), Function.identity());
 }
