@@ -46,6 +46,53 @@ import org.junit.jupiter.api.Test;
 class TryResultTest {
 
   @Nested
+  class GetAndGetError {
+
+    private final String successValue = "ABC";
+    private final Throwable exception = new NoSuchElementException();
+    private final TryResult<String> successResult = TryResult.success(successValue);
+    private final TryResult<String> errorResult = TryResult.error(exception);
+
+    @Test
+    void getSuccess() {
+      // given / when
+      final var result = successResult.get();
+
+      // then
+      assertThat(result).isEqualTo(successValue);
+    }
+
+    @Test
+    void getFailure() {
+      // given / when
+      final var assertion = assertThatCode(errorResult::get);
+
+      // then
+      assertion.isInstanceOf(UnsupportedOperationException.class)
+          .hasMessage("Error does not hold successful value");
+    }
+
+    @Test
+    void getErrorSuccess() {
+      // given / when
+      final var assertion = assertThatCode(successResult::getError);
+
+      // then
+      assertion.isInstanceOf(UnsupportedOperationException.class)
+          .hasMessage("Success does not hold error");
+    }
+
+    @Test
+    void getErrorFailure() {
+      // given / when
+      final var result = errorResult.getError();
+
+      // then
+      assertThat(result).isEqualTo(exception);
+    }
+  }
+
+  @Nested
   class OrElse {
 
     @Test
@@ -206,6 +253,50 @@ class TryResultTest {
       // then
       assertThat(result)
           .isEqualTo(other);
+    }
+  }
+
+  @Nested
+  class GetOrThrow {
+
+    private final NoSuchElementException exception = new NoSuchElementException();
+    private final TryResult<Void> erroneousResult = TryResult.error(exception);
+
+    @Test
+    void getOrThrow() {
+      // given / when
+      final var assertion = assertThatCode(erroneousResult::getOrThrow);
+
+      // then
+      assertion.isEqualTo(exception);
+    }
+
+    @Test
+    void getOrThrowSupplier() {
+      // given
+      final var exception = new IllegalArgumentException();
+      final Supplier<Throwable> supplier = () -> exception;
+
+      // when
+      final var assertion =
+          assertThatCode(() -> erroneousResult.getOrThrow(supplier));
+
+      // then
+      assertion.isEqualTo(exception);
+    }
+
+    @Test
+    void getOrElseFunction() {
+      // given
+      final var exception = new IllegalStateException();
+      final Function<Throwable, IllegalStateException> function = throwable -> exception;
+
+      // when
+      final var assertion =
+          assertThatCode(() -> erroneousResult.getOrThrow(function));
+
+      // then
+      assertion.isEqualTo(exception);
     }
   }
 
@@ -485,11 +576,8 @@ class TryResultTest {
 
     @Test
     void foldSuccess() {
-      // given
-      final var result = successResult;
-
-      // when
-      final var value = result.fold(errorMapper, successMapper);
+      // given / when
+      final var value = successResult.fold(errorMapper, successMapper);
 
       // then
       assertThat(value)
@@ -498,11 +586,8 @@ class TryResultTest {
 
     @Test
     void foldError() {
-      // given
-      final var result = errorResult;
-
-      // when
-      final var value = result.fold(errorMapper, successMapper);
+      // given / when
+      final var value = errorResult.fold(errorMapper, successMapper);
 
       // then
       assertThat(value)

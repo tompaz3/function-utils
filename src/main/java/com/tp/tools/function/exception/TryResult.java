@@ -65,6 +65,22 @@ public abstract class TryResult<T> {
     return isSuccess() ? get() : other;
   }
 
+  public T getOrThrow() {
+    return isSuccess() ? get() : Try.sneakyThrows(getError());
+  }
+
+  public <E extends Throwable> T getOrThrow(final E throwable) {
+    return isSuccess() ? get() : Try.sneakyThrows(throwable);
+  }
+
+  public <E extends Throwable> T getOrThrow(final Supplier<E> throwableSupplier) {
+    return isSuccess() ? get() : Try.sneakyThrows(throwableSupplier.get());
+  }
+
+  public <E extends Throwable> T getOrThrow(final Function<? super Throwable, E> throwableMapper) {
+    return isSuccess() ? get() : Try.sneakyThrows(throwableMapper.apply(getError()));
+  }
+
   public <K> TryResult<K> map(final Function<? super T, ? extends K> mapper) {
     if (isError()) {
       @SuppressWarnings("unchecked") final TryResult<K> result = (TryResult<K>) this;
