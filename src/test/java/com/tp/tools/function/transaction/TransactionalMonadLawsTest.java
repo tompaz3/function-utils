@@ -84,7 +84,7 @@ class TransactionalMonadLawsTest implements TransactionalTestFixture {
   void associativity() {
     // given
     final Function<String, Transactional<Integer>> f =
-        str -> Transactional.ofSupplier(str::length);
+        str -> Transactional.of(str::length);
     final Function<Integer, Transactional<Integer>> g =
         integer -> Transactional.of(integer * 2);
     final var monad = Transactional.of("ABC");

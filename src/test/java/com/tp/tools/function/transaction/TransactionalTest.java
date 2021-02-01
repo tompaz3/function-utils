@@ -77,19 +77,19 @@ class TransactionalTest implements TransactionalTestFixture {
   private final Consumer<String> consumer = integer -> counter.tick("consumer");
   private final CheckedFunction<String, Transactional<Integer>, Throwable> toLength = str -> {
     counter.tick("toLength");
-    return Transactional.ofSupplier(str::length);
+    return Transactional.of(str::length);
   };
   private final Function<Integer, Transactional<Integer>> multiplyTwo =
       length -> {
         counter.tick("multiplyTwo");
-        return Transactional.ofSupplier(() -> 2 * length);
+        return Transactional.of(() -> 2 * length);
       };
 
 
   @Test
   void shouldDoNothingWhenNotExecuted() {
     // given / when
-    Transactional.ofCheckedSupplier(stringThrowableCheckedSupplier)
+    Transactional.ofChecked(stringThrowableCheckedSupplier)
         .mapTry(toUpperCase)
         .map(doNothingMapper)
         .runTry(checkedRunnable)
@@ -111,7 +111,7 @@ class TransactionalTest implements TransactionalTestFixture {
   @Test
   void shouldRunActionsWhenExecuted() {
     // given
-    final var transactional = Transactional.ofCheckedSupplier(stringThrowableCheckedSupplier)
+    final var transactional = Transactional.ofChecked(stringThrowableCheckedSupplier)
         .mapTry(toUpperCase)
         .map(doNothingMapper)
         .runTry(checkedRunnable)
@@ -146,7 +146,7 @@ class TransactionalTest implements TransactionalTestFixture {
   @Test
   void shouldExecuteUntilFailAndRollback() {
     // given
-    final var transactional = Transactional.ofCheckedSupplier(stringThrowableCheckedSupplier)
+    final var transactional = Transactional.ofChecked(stringThrowableCheckedSupplier)
         .mapTry(toUpperCaseErroneous)
         .map(doNothingMapper)
         .runTry(checkedRunnable)
@@ -179,7 +179,7 @@ class TransactionalTest implements TransactionalTestFixture {
   @Test
   void shouldExecuteUntilFailAndSupportNoRollbackForProperties() {
     // given
-    final var transactional = Transactional.ofCheckedSupplier(stringThrowableCheckedSupplier)
+    final var transactional = Transactional.ofChecked(stringThrowableCheckedSupplier)
         .mapTry(toUpperCaseErroneous)
         .map(doNothingMapper)
         .runTry(checkedRunnable)

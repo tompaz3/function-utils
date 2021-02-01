@@ -100,26 +100,26 @@ public class Transactional<T> {
     });
   }
 
-  public static Transactional<Void> ofRunnable(final Runnable runnable) {
-    return ofCheckedRunnable(runnable::run);
+  public static Transactional<Void> of(final Runnable runnable) {
+    return ofChecked(runnable::run);
   }
 
-  public static Transactional<Void> ofCheckedRunnable(
+  public static Transactional<Void> ofChecked(
       final CheckedRunnable<? extends Throwable> runnable) {
     return new Transactional<>(Try.ofTry(runnable));
   }
 
-  public static <T> Transactional<T> ofSupplier(final Supplier<? extends T> supplier) {
-    return ofCheckedSupplier(supplier::get);
+  public static <T> Transactional<T> of(final Supplier<? extends T> supplier) {
+    return ofChecked(supplier::get);
   }
 
-  public static <T> Transactional<T> ofCheckedSupplier(
+  public static <T> Transactional<T> ofChecked(
       final CheckedSupplier<? extends T, ? extends Throwable> supplier) {
     return new Transactional<>(Try.ofTry(supplier));
   }
 
   public static <T> Transactional<T> of(final T value) {
-    return ofCheckedSupplier(() -> value);
+    return ofChecked(() -> value);
   }
 
   public TransactionalWithManager<T> withManager(final TransactionManager transactionManager) {

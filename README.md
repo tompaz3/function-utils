@@ -94,7 +94,7 @@ Example usage:
 private TransactionManager trxManager;
 
 TryResult<UserWithAccount> openUserAccount(Username username, Account account) {
-  return Transactional.ofCheckedSupplier(() -> userRepository.findByUsername(username))
+  return Transactional.ofChecked(() -> userRepository.findByUsername(username))
     .flatMapTry(id -> openAccount(user, account))
     .withManager(trxManager)
     .withProperties(TransactionProperties.defaults())
@@ -102,7 +102,7 @@ TryResult<UserWithAccount> openUserAccount(Username username, Account account) {
 }
 
 Transactional<UserWithAccount> openAccount(User user, Account account) {
-  return Transactional.ofSupplier(() -> accountRepository.create(user.getId(), account))
+  return Transactional.of(() -> accountRepository.create(user.getId(), account))
     .map(createdAccount -> UserWithAccount.of(user, createdAccount));
 }
 ```
