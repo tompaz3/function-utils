@@ -44,27 +44,33 @@ class TransactionalMonadLawsTest implements TransactionalTestFixture {
   void leftIdentity() {
     // given
     final int value = 12345;
-    final var monad = this.<Integer>defaultTransactional()
-        .of(value);
+    final var monad = Transactional.of(value);
     final Function<Integer, Transactional<String>> function =
-        integer -> this.<String>defaultTransactional()
-            .of("ABC_" + integer);
+        integer -> Transactional.of("ABC_" + integer);
 
     // when
     final var flatMappedMonad = monad.flatMap(function);
     final var functionApplied = function.apply(value);
 
     // then
-    assertThat(flatMappedMonad.execute().get())
-        .isEqualTo(functionApplied.execute().get());
+    assertThat(
+        flatMappedMonad.withManager(transactionManager)
+            .withProperties(transactionProperties())
+            .execute().get()
+    ).isEqualTo(
+        functionApplied.withManager(transactionManager)
+            .withProperties(transactionProperties())
+            .execute().get()
+    );
   }
 
   @Test
   void rightIdentity() {
     // given
     final var value = 123;
-    final var monad = this.<Integer>defaultTransactional()
-        .of(value);
+    final var monad = Transactional.of(value)
+        .withManager(transactionManager)
+        .withProperties(transactionProperties());
 
     // when
     final var monadValue = monad.execute().get();
@@ -78,18 +84,19 @@ class TransactionalMonadLawsTest implements TransactionalTestFixture {
   void associativity() {
     // given
     final Function<String, Transactional<Integer>> f =
-        str -> this.<Integer>defaultTransactional()
-            .supply(str::length);
+        str -> Transactional.ofSupplier(str::length);
     final Function<Integer, Transactional<Integer>> g =
-        integer -> this.<Integer>defaultTransactional()
-            .of(integer * 2);
-    final var monad = this.<String>defaultTransactional()
-        .of("ABC");
+        integer -> Transactional.of(integer * 2);
+    final var monad = Transactional.of("ABC");
 
     // when
     final var lhs = monad.flatMap(f).flatMap(g)
+        .withManager(transactionManager)
+        .withProperties(transactionProperties())
         .execute().get();
     final var rhs = monad.flatMap(value -> f.apply(value).flatMap(g))
+        .withManager(transactionManager)
+        .withProperties(transactionProperties())
         .execute().get();
 
     // then

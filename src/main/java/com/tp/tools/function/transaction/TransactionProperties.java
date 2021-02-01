@@ -36,6 +36,12 @@ import lombok.Value;
 @Builder
 public class TransactionProperties {
 
+  private static final TransactionProperties DEFAULT = TransactionProperties.builder().build();
+
   @Singular("noRollbackFor")
   private final Set<? extends Class<? extends Throwable>> noRollbacksFor;
+
+  public static TransactionProperties defaults() {
+    return DEFAULT;
+  }
 }

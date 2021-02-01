@@ -36,8 +36,8 @@ class TestTransactionManagerStub implements TransactionManager {
   private final List<String> operationsExecutedInOrder = new CopyOnWriteArrayList<>();
 
   @Override
-  public void start() {
-    operationsExecutedInOrder.add("start");
+  public void begin() {
+    operationsExecutedInOrder.add("begin");
   }
 
   @Override

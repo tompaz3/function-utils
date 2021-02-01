@@ -27,27 +27,13 @@
 
 package com.tp.tools.function.transaction;
 
-import com.tp.tools.function.transaction.Transactional.TransactionalWithManager;
-
 interface TransactionalTestFixture {
 
-  TransactionManager transactionManager();
-
-  default <T> TransactionalWithManager<T> defaultTransactional() {
-    return Transactional.<T>withProperties(transactionProperties())
-        .withManager(transactionManager());
-  }
-
-  default <T> TransactionalWithManager<T> defaultTransactionalNoRollback() {
-    return Transactional.<T>withProperties(transactionPropertiesNoRollback())
-        .withManager(transactionManager());
-  }
-
-  private TransactionProperties transactionProperties() {
+  default TransactionProperties transactionProperties() {
     return TransactionProperties.builder().build();
   }
 
-  private TransactionProperties transactionPropertiesNoRollback() {
+  default TransactionProperties transactionPropertiesNoRollback() {
     return TransactionProperties.builder()
         .noRollbackFor(TransactionalTestException.class)
         .build();

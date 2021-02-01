@@ -35,6 +35,7 @@ import com.tp.tools.function.exception.CheckedRunnable;
 import com.tp.tools.function.exception.CheckedSupplier;
 import com.tp.tools.function.exception.Try;
 import com.tp.tools.function.exception.TryResult;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -46,6 +47,12 @@ public class Transactional<T> {
   private final TransactionManager transactionManager;
   private final TransactionProperties transactionProperties;
   protected final Try<T> action;
+
+  private Transactional(final Try<T> action) {
+    this.transactionManager = null;
+    this.transactionProperties = null;
+    this.action = action;
+  }
 
   public <K> Transactional<K> map(final Function<? super T, ? extends K> mapper) {
     return mapTry(mapper::apply);
@@ -93,69 +100,67 @@ public class Transactional<T> {
     });
   }
 
-  public TryResult<T> execute() {
-    return Try.ofTry(transactionManager::start)
-        .flatMap(nothing -> action)
-        .runTry(transactionManager::commit)
-        .execute()
-        .onError(this::rollback);
+  public static Transactional<Void> ofRunnable(final Runnable runnable) {
+    return ofCheckedRunnable(runnable::run);
   }
 
-  private void rollback(final Throwable throwable) {
-    if (!transactionProperties.getNoRollbacksFor().contains(throwable.getClass())) {
-      transactionManager.rollback();
-    } else {
-      transactionManager.commit();
-    }
+  public static Transactional<Void> ofCheckedRunnable(
+      final CheckedRunnable<? extends Throwable> runnable) {
+    return new Transactional<>(Try.ofTry(runnable));
   }
 
-  public static <T> TransactionalWithProperties<T> withProperties(
-      final TransactionProperties properties) {
-    return new TransactionalWithProperties<>(properties);
+  public static <T> Transactional<T> ofSupplier(final Supplier<? extends T> supplier) {
+    return ofCheckedSupplier(supplier::get);
   }
 
-  @RequiredArgsConstructor(access = PRIVATE)
-  public static class TransactionalWithProperties<T> {
+  public static <T> Transactional<T> ofCheckedSupplier(
+      final CheckedSupplier<? extends T, ? extends Throwable> supplier) {
+    return new Transactional<>(Try.ofTry(supplier));
+  }
 
-    private final TransactionProperties transactionProperties;
+  public static <T> Transactional<T> of(final T value) {
+    return ofCheckedSupplier(() -> value);
+  }
 
-    public TransactionalWithManager<T> withManager(final TransactionManager transactionManager) {
-      return new TransactionalWithManager<>(this, transactionManager);
-    }
+  public TransactionalWithManager<T> withManager(final TransactionManager transactionManager) {
+    return new TransactionalWithManager<>(transactionManager, action);
   }
 
   @RequiredArgsConstructor(access = PRIVATE)
   public static class TransactionalWithManager<T> {
 
-    private final TransactionalWithProperties<T> transactionalWithProperties;
     private final TransactionManager transactionManager;
+    private final Try<T> action;
 
-    public Transactional<Void> run(final Runnable runnable) {
-      return runTry(runnable::run);
-    }
-
-    public Transactional<Void> runTry(final CheckedRunnable<? extends Throwable> runnable) {
-      return new Transactional<>(transactionManager,
-          transactionalWithProperties.transactionProperties,
-          Try.ofTry(runnable)
-      );
-    }
-
-    public Transactional<T> supply(final Supplier<? extends T> supplier) {
-      return supplyTry(supplier::get);
-    }
-
-    public Transactional<T> supplyTry(
-        final CheckedSupplier<? extends T, ? extends Throwable> supplier) {
-      return new Transactional<>(transactionManager,
-          transactionalWithProperties.transactionProperties,
-          Try.ofTry(supplier)
-      );
-    }
-
-    public Transactional<T> of(final T value) {
-      return supplyTry(() -> value);
+    public ConfiguredTransactional<T> withProperties(
+        final TransactionProperties transactionProperties) {
+      return new ConfiguredTransactional<>(transactionManager, transactionProperties, action);
     }
   }
 
+  @RequiredArgsConstructor(access = PRIVATE)
+  public static class ConfiguredTransactional<T> {
+
+    private final TransactionManager transactionManager;
+    private final TransactionProperties transactionProperties;
+    private final Try<T> action;
+
+    public TryResult<T> execute() {
+      Objects.requireNonNull(transactionManager);
+      Objects.requireNonNull(transactionProperties);
+      return Try.ofTry(transactionManager::begin)
+          .flatMap(nothing -> action)
+          .runTry(transactionManager::commit)
+          .execute()
+          .onError(this::rollback);
+    }
+
+    private void rollback(final Throwable throwable) {
+      if (!transactionProperties.getNoRollbacksFor().contains(throwable.getClass())) {
+        transactionManager.rollback();
+      } else {
+        transactionManager.commit();
+      }
+    }
+  }
 }

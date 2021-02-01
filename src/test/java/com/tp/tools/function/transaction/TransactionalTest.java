@@ -49,6 +49,9 @@ class TransactionalTest implements TransactionalTestFixture {
 
   private final TestTransactionManagerStub transactionManager = new TestTransactionManagerStub();
 
+  private final TestTransactionManagerStub firstTm = new TestTransactionManagerStub();
+  private final TestTransactionManagerStub secondTm = new TestTransactionManagerStub();
+
   private final OperationCounter counter = new OperationCounter();
 
   private final CheckedSupplier<String, Throwable> stringThrowableCheckedSupplier = () -> {
@@ -74,20 +77,19 @@ class TransactionalTest implements TransactionalTestFixture {
   private final Consumer<String> consumer = integer -> counter.tick("consumer");
   private final CheckedFunction<String, Transactional<Integer>, Throwable> toLength = str -> {
     counter.tick("toLength");
-    return this.<Integer>defaultTransactional().supplyTry(str::length);
+    return Transactional.ofSupplier(str::length);
   };
   private final Function<Integer, Transactional<Integer>> multiplyTwo =
       length -> {
         counter.tick("multiplyTwo");
-        return this.<Integer>defaultTransactional().supplyTry(() -> 2 * length);
+        return Transactional.ofSupplier(() -> 2 * length);
       };
 
 
   @Test
   void shouldDoNothingWhenNotExecuted() {
     // given / when
-    this.<String>defaultTransactional()
-        .supplyTry(stringThrowableCheckedSupplier)
+    Transactional.ofCheckedSupplier(stringThrowableCheckedSupplier)
         .mapTry(toUpperCase)
         .map(doNothingMapper)
         .runTry(checkedRunnable)
@@ -95,7 +97,9 @@ class TransactionalTest implements TransactionalTestFixture {
         .peekTry(checkedConsumer)
         .peek(consumer)
         .flatMapTry(toLength)
-        .flatMap(multiplyTwo);
+        .flatMap(multiplyTwo)
+        .withManager(transactionManager)
+        .withProperties(TransactionProperties.defaults());
 
     // then
     assertThat(counter.getCount())
@@ -107,8 +111,7 @@ class TransactionalTest implements TransactionalTestFixture {
   @Test
   void shouldRunActionsWhenExecuted() {
     // given
-    final var transactional = this.<String>defaultTransactional()
-        .supplyTry(stringThrowableCheckedSupplier)
+    final var transactional = Transactional.ofCheckedSupplier(stringThrowableCheckedSupplier)
         .mapTry(toUpperCase)
         .map(doNothingMapper)
         .runTry(checkedRunnable)
@@ -116,7 +119,9 @@ class TransactionalTest implements TransactionalTestFixture {
         .peekTry(checkedConsumer)
         .peek(consumer)
         .flatMapTry(toLength)
-        .flatMap(multiplyTwo);
+        .flatMap(multiplyTwo)
+        .withManager(transactionManager)
+        .withProperties(transactionProperties());
 
     // when
     final var result = transactional.execute();
@@ -135,14 +140,13 @@ class TransactionalTest implements TransactionalTestFixture {
         .isEqualTo(10);
     assertThat(transactionManager.getOperationsExecuted())
         .hasSize(2)
-        .containsExactly("start", "commit");
+        .containsExactly("begin", "commit");
   }
 
   @Test
   void shouldExecuteUntilFailAndRollback() {
     // given
-    final var transactional = this.<String>defaultTransactional()
-        .supplyTry(stringThrowableCheckedSupplier)
+    final var transactional = Transactional.ofCheckedSupplier(stringThrowableCheckedSupplier)
         .mapTry(toUpperCaseErroneous)
         .map(doNothingMapper)
         .runTry(checkedRunnable)
@@ -150,7 +154,9 @@ class TransactionalTest implements TransactionalTestFixture {
         .peekTry(checkedConsumer)
         .peek(consumer)
         .flatMapTry(toLength)
-        .flatMap(multiplyTwo);
+        .flatMap(multiplyTwo)
+        .withManager(transactionManager)
+        .withProperties(transactionProperties());
 
     // when
     final var result = transactional.execute();
@@ -167,14 +173,13 @@ class TransactionalTest implements TransactionalTestFixture {
         .isInstanceOf(TransactionalTestException.class);
     assertThat(transactionManager.getOperationsExecuted())
         .hasSize(2)
-        .containsExactly("start", "rollback");
+        .containsExactly("begin", "rollback");
   }
 
   @Test
   void shouldExecuteUntilFailAndSupportNoRollbackForProperties() {
     // given
-    final var transactional = this.<String>defaultTransactionalNoRollback()
-        .supplyTry(stringThrowableCheckedSupplier)
+    final var transactional = Transactional.ofCheckedSupplier(stringThrowableCheckedSupplier)
         .mapTry(toUpperCaseErroneous)
         .map(doNothingMapper)
         .runTry(checkedRunnable)
@@ -182,7 +187,9 @@ class TransactionalTest implements TransactionalTestFixture {
         .peekTry(checkedConsumer)
         .peek(consumer)
         .flatMapTry(toLength)
-        .flatMap(multiplyTwo);
+        .flatMap(multiplyTwo)
+        .withManager(transactionManager)
+        .withProperties(transactionPropertiesNoRollback());
 
     // when
     final var result = transactional.execute();
@@ -199,7 +206,7 @@ class TransactionalTest implements TransactionalTestFixture {
         .isInstanceOf(TransactionalTestException.class);
     assertThat(transactionManager.getOperationsExecuted())
         .hasSize(2)
-        .containsExactly("start", "commit");
+        .containsExactly("begin", "commit");
   }
 
   @Accessors

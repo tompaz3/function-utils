@@ -29,7 +29,7 @@ package com.tp.tools.function.transaction;
 
 public interface TransactionManager {
 
-  void start();
+  void begin();
 
   void commit();
 

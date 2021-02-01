@@ -8,6 +8,8 @@ Features delivered by this library are:
    sensible solution to conditionally call method chains (especially some fluent builders).
 1. `Try` - monadic type allowing `try-catch` operations to be executed in a monadic way with some
    utility methods. It's execution returns a `TryResult` monad.
+1. `Transactional` - monadic type wrapping transactional executions.
+1. _TODO:_ `Locker` - monadic type helping wrapping the code within a lock.
 
 ## FluentChain
 `FluentChain` was created due to the lack of sensible solution to conditionally method chains.
@@ -80,6 +82,34 @@ UserWithAccountsAndHistory findUserWithAccountsAndHistory(UserId id) {
      .fold(exception -> UserWithAccountsAndHistory.none(), Function.identity());
 }
 ```
+
+## Transactional
+
+`Transactional` monad helps to execute the logic within a transaction. No logic is executed until `execute()`
+method is called. `Transactional` monad is highly dependent from `Try` and `TryResult` monad.
+
+Example usage:
+
+```java
+private TransactionManager trxManager;
+
+TryResult<UserWithAccount> openUserAccount(Username username, Account account) {
+  return Transactional.ofCheckedSupplier(() -> userRepository.findByUsername(username))
+    .flatMapTry(id -> openAccount(user, account))
+    .withManager(trxManager)
+    .withProperties(TransactionProperties.defaults())
+    .execute();
+}
+
+Transactional<UserWithAccount> openAccount(User user, Account account) {
+  return Transactional.ofSupplier(() -> accountRepository.create(user.getId(), account))
+    .map(createdAccount -> UserWithAccount.of(user, createdAccount));
+}
+```
+
+## Locker
+
+_TBD_
 
 [1]: https://projectlombok.org/features/Builder
 
