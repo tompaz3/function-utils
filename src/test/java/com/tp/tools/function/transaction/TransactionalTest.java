@@ -138,7 +138,6 @@ class TransactionalTest implements TransactionalTestFixture {
         .containsExactly("start", "commit");
   }
 
-  // FIXME:
   @Test
   void shouldExecuteUntilFailAndRollback() {
     // given
@@ -171,7 +170,6 @@ class TransactionalTest implements TransactionalTestFixture {
         .containsExactly("start", "rollback");
   }
 
-  // FIXME:
   @Test
   void shouldExecuteUntilFailAndSupportNoRollbackForProperties() {
     // given
