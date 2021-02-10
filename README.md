@@ -62,7 +62,7 @@ is _lazy_, thus no operations are executed until `.execute()` method gets called
 `Try` execution returns a `TryResult<T>` type containing either successful value of type `T` or
 a `Throwable` error. 
 
-`TryResult<T>` unlike `Try`, executes eagerly (might change to lazy evaluated as well in the future).
+`TryResult<T>` unlike `Try`, executes eagerly.
 
 Example usage:
 

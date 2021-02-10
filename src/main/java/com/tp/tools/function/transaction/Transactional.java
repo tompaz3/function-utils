@@ -44,15 +44,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor(access = PRIVATE)
 public class Transactional<T> {
 
-  private final TransactionManager transactionManager;
-  private final TransactionProperties transactionProperties;
   protected final Try<T> action;
-
-  private Transactional(final Try<T> action) {
-    this.transactionManager = null;
-    this.transactionProperties = null;
-    this.action = action;
-  }
 
   public <K> Transactional<K> map(final Function<? super T, ? extends K> mapper) {
     return mapTry(mapper::apply);
@@ -60,7 +52,7 @@ public class Transactional<T> {
 
   public <K> Transactional<K> mapTry(
       final CheckedFunction<? super T, ? extends K, ? extends Throwable> mapper) {
-    return new Transactional<>(transactionManager, transactionProperties, action.mapTry(mapper));
+    return new Transactional<>(action.mapTry(mapper));
   }
 
   public <K> Transactional<K> flatMap(
@@ -70,7 +62,7 @@ public class Transactional<T> {
 
   public <K> Transactional<K> flatMapTry(
       final CheckedFunction<? super T, ? extends Transactional<K>, ? extends Throwable> mapper) {
-    return new Transactional<>(transactionManager, transactionProperties,
+    return new Transactional<>(
         Try.ofTry(() -> action.mapTry(mapper)
             .execute()
             .getOrThrow().action)
