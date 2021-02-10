@@ -27,19 +27,15 @@
 
 package com.tp.tools.function.exception;
 
-import static lombok.AccessLevel.PRIVATE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
-import java.util.List;
+import com.tp.tools.function.OperationCounter;
 import java.util.NoSuchElementException;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import lombok.Getter;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -113,8 +109,6 @@ class TryResultTest {
           .isEqualTo(first.isSuccess());
       assertThat(result.get())
           .isEqualTo(first.get());
-      assertThat(operationCounter.getCount())
-          .isZero();
       assertThat(operationCounter.getExecutedOperations())
           .isEmpty();
     }
@@ -138,8 +132,6 @@ class TryResultTest {
           .isEqualTo(second.isSuccess());
       assertThat(result.get())
           .isEqualTo(second.get());
-      assertThat(operationCounter.getCount())
-          .isOne();
       assertThat(operationCounter.getExecutedOperations())
           .singleElement()
           .isEqualTo("otherSupplier");
@@ -197,8 +189,6 @@ class TryResultTest {
       // then
       assertThat(result)
           .isEqualTo(first.get());
-      assertThat(operationCounter.getCount())
-          .isZero();
       assertThat(operationCounter.getExecutedOperations())
           .isEmpty();
     }
@@ -220,8 +210,6 @@ class TryResultTest {
       // then
       assertThat(result)
           .isEqualTo(second);
-      assertThat(operationCounter.getCount())
-          .isOne();
       assertThat(operationCounter.getExecutedOperations())
           .singleElement()
           .isEqualTo("otherSupplier");
@@ -398,8 +386,6 @@ class TryResultTest {
         assertThat(result.getError())
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("ABC");
-        assertThat(operationCounter.getCount())
-            .isEqualTo(6);
         assertThat(operationCounter.getExecutedOperations())
             .hasSize(6)
             .containsExactly("anyErrorRunnable", "anyErrorConsumer",
@@ -592,22 +578,6 @@ class TryResultTest {
       // then
       assertThat(value)
           .isEqualTo(successValue.length() + 2);
-    }
-  }
-
-  private static class OperationCounter {
-
-    @Getter(PRIVATE)
-    private final List<String> executedOperations = new CopyOnWriteArrayList<>();
-    private final AtomicInteger count = new AtomicInteger();
-
-    private void tick(final String operationName) {
-      count.incrementAndGet();
-      executedOperations.add(operationName);
-    }
-
-    private int getCount() {
-      return count.get();
     }
   }
 }

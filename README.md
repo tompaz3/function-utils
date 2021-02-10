@@ -9,7 +9,7 @@ Features delivered by this library are:
 1. `Try` - monadic type allowing `try-catch` operations to be executed in a monadic way with some
    utility methods. It's execution returns a `TryResult` monad.
 1. `Transactional` - monadic type wrapping transactional executions.
-1. _TODO:_ `Locker` - monadic type helping wrapping the code within a lock.
+1. `Locker` - monadic type helping wrapping the code within a lock.
 
 ## FluentChain
 `FluentChain` was created due to the lack of sensible solution to conditionally method chains.
@@ -88,6 +88,12 @@ UserWithAccountsAndHistory findUserWithAccountsAndHistory(UserId id) {
 `Transactional` monad helps to execute the logic within a transaction. No logic is executed until `execute()`
 method is called. `Transactional` monad is highly dependent from `Try` and `TryResult` monad.
 
+Requires `TransactionManager` implementation which provides methods for managing transaction: `begin()`,
+`commit()`, `rollback()`.
+
+Allows specifying exceptions that should not cause a transaction to be rolled back (aborts further
+execution, though), by providing `TransactionProperties`.
+
 Example usage:
 
 ```java
@@ -109,8 +115,68 @@ Transactional<UserWithAccount> openAccount(User user, Account account) {
 
 ## Locker
 
-_TBD_
+`Locker` monad helps to execute the logic within a transaction. No logic is executed until `execute()`
+method is called. `Locker` monad is highly dependent from `Try` and `TryResult` monad.
+
+Requires `Lock` implementation, which has `lock()` and `unlock()` methods.
+
+Example usage:
+
+```java
+TryResult<Account> getOrCreateUserDefaultAccount() {
+   return Locker.of(() -> userRepository.findByUsername(username))
+     .map(User::getId)
+     .map(user -> accountService.hasNoAccountYet(user.getId())
+           ? accountService.openDefaultAccount(user.getId())
+           : accountService.findDefaultAccountByUserId(user.getId())
+     )
+     .withLock(() -> lockRegistry.usernameLock(username))
+     .execute();
+}
+```
+
+### Lock
+
+`Lock` is a simple class with `lock()` and `unlock()` methods, used by `Locker` monad.
+
+Sample usage (with [Hazelcast IMDG][3]):
+```java
+public class HazelcastLockRegistry {
+  private final HazelcastInstance hzInstance;
+  private final HzLockConfig hzLockConfig;
+  
+  HazelcastLockRegistry(HazelcastInstance hzInstance, HzLockConfig hzLockConfig) {
+   this.hzInstance = hzInstance;
+   this.hzLockConfig = hzLockConfig;
+  }
+
+   public Lock usernameLock(String username) {
+    return new Lock(() -> hzInstance.getMap(hzLockConfig.getUsernameMap()),
+        username,
+        hzLockConfig.getUsernameLeaseDuration());
+  }
+  
+  private static class HzMapLock implements Lock {
+    private final Supplier<IMap<Object,Object>> mapSupplier;
+    private final Object key;
+    private final Duration leaseDuration;
+    
+    @Override
+    public Try<Void> lock() {
+      return Try.of(mapSupplier)
+        .map(map -> map.lock(key, leaseDuration.toMillis(), TimeUnit.MILLISECONDS));
+    }
+    
+    @Override
+    public Try<Void> unlock() {
+      return Try.of(mapSupplier)
+          .map(map -> map.unlock(key);
+    }
+  }
+}
+```
+
 
 [1]: https://projectlombok.org/features/Builder
-
 [2]: https://developers.google.com/protocol-buffers/docs/javatutorial#builders
+[3]: https://hazelcast.com/products/imdg/
