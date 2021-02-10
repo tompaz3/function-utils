@@ -27,15 +27,11 @@
 
 package com.tp.tools.function.exception;
 
-import static lombok.AccessLevel.PRIVATE;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
+import com.tp.tools.function.OperationCounter;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import lombok.Getter;
 import org.junit.jupiter.api.Test;
 
 class TryTest {
@@ -90,8 +86,6 @@ class TryTest {
         .flatMap(doNothingFlatMapper);
 
     // then
-    assertThat(counter.getCount())
-        .isZero();
     assertThat(counter.getExecutedOperations())
         .isEmpty();
   }
@@ -114,8 +108,6 @@ class TryTest {
     final TryResult<Integer> result = execution.execute();
 
     // then
-    assertThat(counter.getCount())
-        .isEqualTo(10);
     assertThat(counter.getExecutedOperations())
         .hasSize(10)
         .containsExactly("stringThrowableCheckedSupplier", "toUpperCase", "doNothingMapper",
@@ -145,8 +137,6 @@ class TryTest {
     final TryResult<Integer> result = execution.execute();
 
     // then
-    assertThat(counter.getCount())
-        .isEqualTo(2);
     assertThat(counter.getExecutedOperations())
         .hasSize(2)
         .containsExactly("stringThrowableCheckedSupplier", "toUpperCaseErroneous");
@@ -155,21 +145,5 @@ class TryTest {
     assertThat(result.getError())
         .isInstanceOf(RuntimeException.class)
         .hasMessage("toUpperCaseErroneous");
-  }
-
-  private static class OperationCounter {
-
-    @Getter(PRIVATE)
-    private final List<String> executedOperations = new CopyOnWriteArrayList<>();
-    private final AtomicInteger count = new AtomicInteger();
-
-    private void tick(final String operationName) {
-      count.incrementAndGet();
-      executedOperations.add(operationName);
-    }
-
-    private int getCount() {
-      return count.get();
-    }
   }
 }

@@ -25,8 +25,9 @@
  * For more information, please refer to <https://unlicense.org>
  */
 
-package com.tp.tools.function.transaction;
+package com.tp.tools.function.lock;
 
+import static lombok.AccessLevel.PRIVATE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tp.tools.function.OperationCounter;
@@ -34,22 +35,23 @@ import com.tp.tools.function.exception.CheckedConsumer;
 import com.tp.tools.function.exception.CheckedFunction;
 import com.tp.tools.function.exception.CheckedRunnable;
 import com.tp.tools.function.exception.CheckedSupplier;
+import com.tp.tools.function.exception.Try;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 import lombok.Getter;
-import lombok.experimental.Accessors;
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 
-@Getter
-@Accessors(fluent = true)
-class TransactionalTest implements TransactionalTestFixture {
-
-  private final TestTransactionManagerStub transactionManager = new TestTransactionManagerStub();
-
-  private final TestTransactionManagerStub firstTm = new TestTransactionManagerStub();
-  private final TestTransactionManagerStub secondTm = new TestTransactionManagerStub();
+public class LockerTest {
 
   private final OperationCounter counter = new OperationCounter();
+  private final TestLockStub lock = new TestLockStub();
 
   private final CheckedSupplier<String, Throwable> stringThrowableCheckedSupplier = () -> {
     counter.tick("stringThrowableCheckedSupplier");
@@ -65,28 +67,28 @@ class TransactionalTest implements TransactionalTestFixture {
   };
   private final CheckedFunction<String, String, Throwable> toUpperCaseErroneous = str -> {
     counter.tick("toUpperCaseErroneous");
-    throw new TransactionalTestException();
+    throw new LockerTestException();
   };
   private final CheckedRunnable<Throwable> checkedRunnable = () -> counter.tick("checkedRunnable");
   private final Runnable runnable = () -> counter.tick("runnable");
   private final CheckedConsumer<String, Throwable> checkedConsumer =
       integer -> counter.tick("checkedConsumer");
   private final Consumer<String> consumer = integer -> counter.tick("consumer");
-  private final CheckedFunction<String, Transactional<Integer>, Throwable> toLength = str -> {
+  private final CheckedFunction<String, Locker<Integer>, Throwable> toLength = str -> {
     counter.tick("toLength");
-    return Transactional.of(str::length);
+    return Locker.of(str::length);
   };
-  private final Function<Integer, Transactional<Integer>> multiplyTwo =
+  private final Function<Integer, Locker<Integer>> multiplyTwo =
       length -> {
         counter.tick("multiplyTwo");
-        return Transactional.of(() -> 2 * length);
+        return Locker.of(() -> 2 * length);
       };
-
 
   @Test
   void shouldDoNothingWhenNotExecuted() {
     // given / when
-    Transactional.ofChecked(stringThrowableCheckedSupplier)
+    // given / when
+    Locker.ofChecked(stringThrowableCheckedSupplier)
         .mapTry(toUpperCase)
         .map(doNothingMapper)
         .runTry(checkedRunnable)
@@ -95,18 +97,19 @@ class TransactionalTest implements TransactionalTestFixture {
         .peek(consumer)
         .flatMapTry(toLength)
         .flatMap(multiplyTwo)
-        .withManager(transactionManager)
-        .withProperties(TransactionProperties.defaults());
+        .withLock(lock);
 
     // then
     assertThat(counter.getExecutedOperations())
+        .isEmpty();
+    assertThat(lock.getOperationsExecuted())
         .isEmpty();
   }
 
   @Test
   void shouldRunActionsWhenExecuted() {
     // given
-    final var transactional = Transactional.ofChecked(stringThrowableCheckedSupplier)
+    final var transactional = Locker.ofChecked(stringThrowableCheckedSupplier)
         .mapTry(toUpperCase)
         .map(doNothingMapper)
         .runTry(checkedRunnable)
@@ -115,8 +118,7 @@ class TransactionalTest implements TransactionalTestFixture {
         .peek(consumer)
         .flatMapTry(toLength)
         .flatMap(multiplyTwo)
-        .withManager(transactionManager)
-        .withProperties(transactionProperties());
+        .withLock(lock);
 
     // when
     final var result = transactional.execute();
@@ -127,19 +129,19 @@ class TransactionalTest implements TransactionalTestFixture {
         .containsExactly("stringThrowableCheckedSupplier", "toUpperCase", "doNothingMapper",
             "checkedRunnable", "runnable", "checkedConsumer", "consumer",
             "toLength", "multiplyTwo");
+    assertThat(lock.getOperationsExecuted())
+        .hasSize(2)
+        .containsExactly("lock", "unlock");
     assertThat(result.isSuccess())
         .isTrue();
     assertThat(result.get())
         .isEqualTo(10);
-    assertThat(transactionManager.getOperationsExecuted())
-        .hasSize(2)
-        .containsExactly("begin", "commit");
   }
 
   @Test
-  void shouldExecuteUntilFailAndRollback() {
+  void shouldExecuteUntilFailAndUnlock() {
     // given
-    final var transactional = Transactional.ofChecked(stringThrowableCheckedSupplier)
+    final var transactional = Locker.ofChecked(stringThrowableCheckedSupplier)
         .mapTry(toUpperCaseErroneous)
         .map(doNothingMapper)
         .runTry(checkedRunnable)
@@ -148,8 +150,7 @@ class TransactionalTest implements TransactionalTestFixture {
         .peek(consumer)
         .flatMapTry(toLength)
         .flatMap(multiplyTwo)
-        .withManager(transactionManager)
-        .withProperties(transactionProperties());
+        .withLock(lock);
 
     // when
     final var result = transactional.execute();
@@ -158,43 +159,62 @@ class TransactionalTest implements TransactionalTestFixture {
     assertThat(counter.getExecutedOperations())
         .hasSize(2)
         .containsExactly("stringThrowableCheckedSupplier", "toUpperCaseErroneous");
+    assertThat(lock.getOperationsExecuted())
+        .hasSize(2)
+        .containsExactly("lock", "unlock");
     assertThat(result.isError())
         .isTrue();
     assertThat(result.getError())
-        .isInstanceOf(TransactionalTestException.class);
-    assertThat(transactionManager.getOperationsExecuted())
-        .hasSize(2)
-        .containsExactly("begin", "rollback");
+        .isInstanceOf(LockerTestException.class);
   }
 
   @Test
-  void shouldExecuteUntilFailAndSupportNoRollbackForProperties() {
+  void shouldNotAllowConcurrentExecutionsWhenLocked() {
     // given
-    final var transactional = Transactional.ofChecked(stringThrowableCheckedSupplier)
-        .mapTry(toUpperCaseErroneous)
-        .map(doNothingMapper)
-        .runTry(checkedRunnable)
-        .run(runnable)
-        .peekTry(checkedConsumer)
-        .peek(consumer)
-        .flatMapTry(toLength)
-        .flatMap(multiplyTwo)
-        .withManager(transactionManager)
-        .withProperties(transactionPropertiesNoRollback());
+    final var latch = new CountDownLatch(3);
+    final var executor = Executors.newFixedThreadPool(3);
+    final var decrementInteger = new DecrementInteger(counter);
 
     // when
-    final var result = transactional.execute();
+    final var futures = IntStream.range(0, 3).mapToObj(ignore ->
+        CompletableFuture.supplyAsync(() -> {
+              Try.of(latch::countDown)
+                  .runTry(latch::await)
+                  .execute()
+                  .getOrThrow();
+              return Locker.of(decrementInteger::decrement).withLock(lock).execute();
+            }, executor
+        ))
+        .toArray(CompletableFuture[]::new);
+    CompletableFuture.allOf(futures).join();
 
     // then
-    assertThat(counter.getExecutedOperations())
-        .hasSize(2)
-        .containsExactly("stringThrowableCheckedSupplier", "toUpperCaseErroneous");
-    assertThat(result.isError())
-        .isTrue();
-    assertThat(result.getError())
-        .isInstanceOf(TransactionalTestException.class);
-    assertThat(transactionManager.getOperationsExecuted())
-        .hasSize(2)
-        .containsExactly("begin", "commit");
+    assertThat(decrementInteger.getCounter().getExecutedOperations())
+        .singleElement()
+        .isEqualTo("decrement");
+    assertThat(lock.getOperationsExecuted())
+        .hasSize(6)
+        .containsExactly("lock", "unlock", "lock", "unlock", "lock", "unlock");
+  }
+
+  private static class LockerTestException extends Exception {
+
+    private static final long serialVersionUID = 744817257843331422L;
+  }
+
+  @RequiredArgsConstructor(access = PRIVATE)
+  private static class DecrementInteger {
+
+    private final AtomicInteger integer = new AtomicInteger(1);
+    @Getter(PRIVATE)
+    private final OperationCounter counter;
+
+    @SneakyThrows
+    private void decrement() {
+      if (integer.get() == 1) {
+        counter.tick("decrement");
+        integer.decrementAndGet();
+      }
+    }
   }
 }
