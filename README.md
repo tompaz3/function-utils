@@ -126,7 +126,8 @@ Example usage:
 TryResult<Account> getOrCreateUserDefaultAccount() {
    return Locker.of(() -> userRepository.findByUsername(username))
      .map(User::getId)
-     .map(user -> accountService.hasNoAccountYet(user.getId())
+     .map(user -> accountService.hasNoAccountYet(user.getId()) // this check requires the lock (critical section), 
+                                                               // not to create multiple deafult accounts for the user
            ? accountService.openDefaultAccount(user.getId())
            : accountService.findDefaultAccountByUserId(user.getId())
      )
