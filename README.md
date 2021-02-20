@@ -7,7 +7,7 @@ Features delivered by this library are:
 1. `FluentChain` - monadic type helper for builder-like operations. Created due to the lack of some
    sensible solution to conditionally call method chains (especially some fluent builders).
 1. `Try` - monadic type allowing `try-catch` operations to be executed in a monadic way with some
-   utility methods. It's execution returns a `TryResult` monad.
+   utility methods.
 1. `Transactional` - monadic type wrapping transactional executions.
 1. `Locker` - monadic type helping wrapping the code within a lock.
 
