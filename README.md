@@ -11,6 +11,39 @@ Features delivered by this library are:
 1. `FluentChain` - monadic type helper for builder-like operations. Created due to the lack of some
    sensible solution to conditionally call method chains (especially some fluent builders).
 
+## Either
+
+`Either` monad is a typical either/maybe monad. It allows operating on conflicting values, when it's allowed to work on either of the two.
+
+Example usage:
+
+```java
+interface Adult
+interface Kid
+
+IdDocument getIdDocument(PersonId personId) {
+  Either<Kid,Adult> kidOrAdult = persons.findPerson(personId);
+  return kidOrAdult.fold(
+      idRepository::getKidIdDocument,
+      idRepository::getAdultIdDocument
+  );
+}
+```
+
+```java
+interface GeneralError {}
+class SendMailError implements GeneralError {}
+class UserNotFoundError implements GeneralError {}
+class MissingUserEmailAddressError implements GeneralError {}
+
+Either<? extends GeneralError, Void> sendMailToUser(UserId userId, Mail mail) {
+  return findUser(userId) // Either<UserNotFoundError, User>
+      .flatMap(this::getUserEmailAddress) // Either<MissingUserEmailAddressError, EmailAddress>
+      .flatMap(emailAddress -> sendEmail(emailAddress, mail)); // Either<SendMailError, Void>
+}
+```
+
+
 ## Try
 
 `Try` monad helps executing and chaining `try-catch` operations in a nice and fluent way. This monad
