@@ -49,7 +49,7 @@ Either<? extends GeneralError, Void> sendMailToUser(UserId userId, Mail mail) {
 `Try` monad helps executing and chaining `try-catch` operations in a nice and fluent way. This monad
 is _lazy_, thus no operations are executed until `.execute()` method gets called.
 `Try` execution returns a `TryResult<T>` type containing either successful value of type `T` or
-a `Throwable` error. 
+a `Throwable` error.
 
 `TryResult<T>` unlike `Try`, executes eagerly.
 
@@ -57,7 +57,8 @@ Example usage:
 
 ```java
 UserWithAccountsAndHistory findUserWithAccountsAndHistory(UserId id) {
-   TryResult<UserWithAccountsAndHistory> userWithAccountsAndHistory = Try.of(() -> userRepository.findUserById(id))
+   TryResult<UserWithAccountsAndHistory> userWithAccountsAndHistory = Try.of(() -> users.getById(id))
+     .recover(UserNotFoundException.class, userNotFoundException -> Try.of(() -> userRepository.findUserById(id)))
      .mapTry(userAccountRepository::fetchUserWithAccounts)
      .peek(userWithAccounts -> log.debug("User {} has {} accounts",user.getUsername(),user.getAccounts().size()))
      .flatMapTry(userAccountRepository::fetchUserWithAccountsAndHistory)
