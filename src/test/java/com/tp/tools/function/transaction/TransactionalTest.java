@@ -42,7 +42,7 @@ import org.junit.jupiter.api.Test;
 
 @Getter
 @Accessors(fluent = true)
-class TransactionalTest implements TransactionalTestFixture {
+class TransactionalTest {
 
   private final TestTransactionManagerStub transactionManager = new TestTransactionManagerStub();
 
@@ -95,8 +95,7 @@ class TransactionalTest implements TransactionalTestFixture {
         .peek(consumer)
         .flatMapTry(toLength)
         .flatMap(multiplyTwo)
-        .withManager(transactionManager)
-        .withProperties(TransactionProperties.defaults());
+        .withManager(transactionManager);
 
     // then
     assertThat(counter.getExecutedOperations())
@@ -115,8 +114,7 @@ class TransactionalTest implements TransactionalTestFixture {
         .peek(consumer)
         .flatMapTry(toLength)
         .flatMap(multiplyTwo)
-        .withManager(transactionManager)
-        .withProperties(transactionProperties());
+        .withManager(transactionManager);
 
     // when
     final var result = transactional.execute();
@@ -148,8 +146,7 @@ class TransactionalTest implements TransactionalTestFixture {
         .peek(consumer)
         .flatMapTry(toLength)
         .flatMap(multiplyTwo)
-        .withManager(transactionManager)
-        .withProperties(transactionProperties());
+        .withManager(transactionManager);
 
     // when
     final var result = transactional.execute();
@@ -165,36 +162,5 @@ class TransactionalTest implements TransactionalTestFixture {
     assertThat(transactionManager.getOperationsExecuted())
         .hasSize(2)
         .containsExactly("begin", "rollback");
-  }
-
-  @Test
-  void shouldExecuteUntilFailAndSupportNoRollbackForProperties() {
-    // given
-    final var transactional = Transactional.ofChecked(stringThrowableCheckedSupplier)
-        .mapTry(toUpperCaseErroneous)
-        .map(doNothingMapper)
-        .runTry(checkedRunnable)
-        .run(runnable)
-        .peekTry(checkedConsumer)
-        .peek(consumer)
-        .flatMapTry(toLength)
-        .flatMap(multiplyTwo)
-        .withManager(transactionManager)
-        .withProperties(transactionPropertiesNoRollback());
-
-    // when
-    final var result = transactional.execute();
-
-    // then
-    assertThat(counter.getExecutedOperations())
-        .hasSize(2)
-        .containsExactly("stringThrowableCheckedSupplier", "toUpperCaseErroneous");
-    assertThat(result.isError())
-        .isTrue();
-    assertThat(result.getError())
-        .isInstanceOf(TransactionalTestException.class);
-    assertThat(transactionManager.getOperationsExecuted())
-        .hasSize(2)
-        .containsExactly("begin", "commit");
   }
 }
