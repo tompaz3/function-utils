@@ -107,7 +107,7 @@ class TryTest {
   @Test
   void shouldDoNothingWhenNotExecuted() {
     // given / when
-    final Try<Integer> execution = Try.ofTry(stringThrowableCheckedSupplier)
+    Try.ofTry(stringThrowableCheckedSupplier)
         .mapTry(toUpperCase)
         .map(doNothingMapper)
         .mapTry(toLength)
@@ -196,6 +196,39 @@ class TryTest {
 
   @Nested
   class Recover {
+
+    @Test
+    void shouldDoNothingOnRecoverWhenNotExecuted() {
+      // given / when
+      Try.ofTry(stringThrowableCheckedSupplier)
+          // START: theses recovers should not execute, because they're registered before any error occurs
+          .recoverTry(SpecificException.class, checkedRecover)
+          .recoverTry(specificExceptionClassPredicate, checkedRecover)
+          .recoverTry(checkedRecover)
+          .recover(SpecificException.class, recover)
+          .recover(specificExceptionClassPredicate, recover)
+          .recover(recover)
+          // END: theses recovers should not execute, because they're registered before any error occurs
+          .mapTry(toUpperCaseErroneous)
+          .map(doNothingMapper)
+          // START: theses recovers should not execute, because they mismatch the error type
+          .recoverTry(IllegalStateException.class, checkedRecover)
+          .recoverTry(throwable -> throwable instanceof IllegalStateException, checkedRecover)
+          .recover(IllegalStateException.class, recover)
+          .recover(throwable -> throwable instanceof IllegalStateException, recover)
+          // END: theses recovers should not execute, because they mismatch the error type
+          .mapTry(toLength)
+          .runTry(checkedRunnable)
+          .run(runnable)
+          .peekTry(checkedConsumer)
+          .peek(consumer)
+          .flatMapTry(multiplyTwo)
+          .flatMap(doNothingFlatMapper);
+
+      // then
+      assertThat(counter.getExecutedOperations())
+          .isEmpty();
+    }
 
     @Test
     void shouldExecuteUntilFailAndRecoverTryWithClass() {
