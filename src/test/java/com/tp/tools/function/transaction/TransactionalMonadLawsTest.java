@@ -30,13 +30,9 @@ package com.tp.tools.function.transaction;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.function.Function;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import org.junit.jupiter.api.Test;
 
-@Getter
-@Accessors(fluent = true)
-class TransactionalMonadLawsTest implements TransactionalTestFixture {
+class TransactionalMonadLawsTest {
 
   private final TransactionManager transactionManager = new TestTransactionManagerStub();
 
@@ -55,11 +51,9 @@ class TransactionalMonadLawsTest implements TransactionalTestFixture {
     // then
     assertThat(
         flatMappedMonad.withManager(transactionManager)
-            .withProperties(transactionProperties())
             .execute().get()
     ).isEqualTo(
         functionApplied.withManager(transactionManager)
-            .withProperties(transactionProperties())
             .execute().get()
     );
   }
@@ -69,8 +63,7 @@ class TransactionalMonadLawsTest implements TransactionalTestFixture {
     // given
     final var value = 123;
     final var monad = Transactional.of(value)
-        .withManager(transactionManager)
-        .withProperties(transactionProperties());
+        .withManager(transactionManager);
 
     // when
     final var monadValue = monad.execute().get();
@@ -92,11 +85,9 @@ class TransactionalMonadLawsTest implements TransactionalTestFixture {
     // when
     final var lhs = monad.flatMap(f).flatMap(g)
         .withManager(transactionManager)
-        .withProperties(transactionProperties())
         .execute().get();
     final var rhs = monad.flatMap(value -> f.apply(value).flatMap(g))
         .withManager(transactionManager)
-        .withProperties(transactionProperties())
         .execute().get();
 
     // then

@@ -114,45 +114,23 @@ public class Transactional<T> {
     return ofChecked(() -> value);
   }
 
-  public TransactionalWithManager<T> withManager(final TransactionManager transactionManager) {
-    return new TransactionalWithManager<>(transactionManager, action);
-  }
-
-  @RequiredArgsConstructor(access = PRIVATE)
-  public static class TransactionalWithManager<T> {
-
-    private final TransactionManager transactionManager;
-    private final Try<T> action;
-
-    public ConfiguredTransactional<T> withProperties(
-        final TransactionProperties transactionProperties) {
-      return new ConfiguredTransactional<>(transactionManager, transactionProperties, action);
-    }
+  public ConfiguredTransactional<T> withManager(final TransactionManager transactionManager) {
+    return new ConfiguredTransactional<>(transactionManager, action);
   }
 
   @RequiredArgsConstructor(access = PRIVATE)
   public static class ConfiguredTransactional<T> {
 
     private final TransactionManager transactionManager;
-    private final TransactionProperties transactionProperties;
     private final Try<T> action;
 
     public TryResult<T> execute() {
       Objects.requireNonNull(transactionManager);
-      Objects.requireNonNull(transactionProperties);
       return Try.ofTry(transactionManager::begin)
           .flatMap(nothing -> action)
           .runTry(transactionManager::commit)
           .execute()
-          .onError(this::rollback);
-    }
-
-    private void rollback(final Throwable throwable) {
-      if (!transactionProperties.getNoRollbacksFor().contains(throwable.getClass())) {
-        transactionManager.rollback();
-      } else {
-        transactionManager.commit();
-      }
+          .onError(throwable -> transactionManager.rollback());
     }
   }
 }

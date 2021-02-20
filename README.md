@@ -91,9 +91,6 @@ method is called. `Transactional` monad is highly dependent from `Try` and `TryR
 Requires `TransactionManager` implementation which provides methods for managing transaction: `begin()`,
 `commit()`, `rollback()`.
 
-Allows specifying exceptions that should not cause a transaction to be rolled back (aborts further
-execution, though), by providing `TransactionProperties`.
-
 Example usage:
 
 ```java
@@ -103,7 +100,6 @@ TryResult<UserWithAccount> openUserAccount(Username username, Account account) {
   return Transactional.ofChecked(() -> userRepository.findByUsername(username))
     .flatMapTry(id -> openAccount(user, account))
     .withManager(trxManager)
-    .withProperties(TransactionProperties.defaults())
     .execute();
 }
 
