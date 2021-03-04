@@ -11,5 +11,5 @@ ifneq (${DEPLOY_VERSION},)
 	git tag ${DEPLOY_VERSION}
 	mvn deploy -P push-to-repo
 else
-	@echo "Invalid verision: ${VERSION}"
+	mvn deploy -P push-to-repo
 endif
