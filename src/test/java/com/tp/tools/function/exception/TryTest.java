@@ -30,9 +30,12 @@ package com.tp.tools.function.exception;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tp.tools.function.OperationCounter;
+import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -101,13 +104,54 @@ class TryTest {
         counter.tick("recoverSpecificException");
         return Try.of(RECOVER_VALUE);
       };
-  final Predicate<Throwable> specificExceptionClassPredicate =
+  private final Predicate<Throwable> specificExceptionClassPredicate =
       throwable -> throwable instanceof SpecificException;
+
+  private final CheckedPredicate<String, Throwable> filterFoundCheckedPredicate =
+      string -> {
+        counter.tick("filterFoundCheckedPredicate");
+        return Objects.nonNull(string);
+      };
+  private final Predicate<String> filterFoundPredicate =
+      string -> {
+        counter.tick("filterFoundPredicate");
+        return Objects.nonNull(string);
+      };
+  private final CheckedPredicate<String, Throwable> filterNotFoundCheckedPredicate =
+      string -> {
+        counter.tick("filterNotFoundCheckedPredicate");
+        return Objects.isNull(string);
+      };
+  private final Predicate<String> filterNotFoundPredicate =
+      string -> {
+        counter.tick("filterNotFoundPredicate");
+        return Objects.isNull(string);
+      };
+  private final Supplier<NoSuchElementException> noSuchElementExceptionSupplier =
+      NoSuchElementException::new;
 
   @Test
   void shouldDoNothingWhenNotExecuted() {
     // given / when
     Try.ofTry(stringThrowableCheckedSupplier)
+        // start:filter
+        .filterTry(filterFoundCheckedPredicate)
+        .filterTry(filterFoundCheckedPredicate, noSuchElementExceptionSupplier)
+        .filterTry(filterFoundCheckedPredicate, new NoSuchElementException())
+        .filterTry(filterFoundCheckedPredicate, value -> new IllegalArgumentException())
+        .filter(filterFoundPredicate)
+        .filter(filterFoundPredicate, noSuchElementExceptionSupplier)
+        .filter(filterFoundPredicate, new NoSuchElementException())
+        .filter(filterFoundPredicate, value -> new IllegalArgumentException())
+        .filterTry(filterNotFoundCheckedPredicate)
+        .filterTry(filterNotFoundCheckedPredicate, noSuchElementExceptionSupplier)
+        .filterTry(filterNotFoundCheckedPredicate, new NoSuchElementException())
+        .filterTry(filterNotFoundCheckedPredicate, value -> new IllegalArgumentException())
+        .filter(filterNotFoundPredicate)
+        .filter(filterNotFoundPredicate, noSuchElementExceptionSupplier)
+        .filter(filterNotFoundPredicate, new NoSuchElementException())
+        .filter(filterNotFoundPredicate, value -> new IllegalArgumentException())
+        // end:filter
         .mapTry(toUpperCase)
         .map(doNothingMapper)
         .mapTry(toLength)
@@ -127,6 +171,16 @@ class TryTest {
   void shouldRunActionsWhenExecuted() {
     // given
     final Try<Integer> execution = Try.ofTry(stringThrowableCheckedSupplier)
+        // start:filter-found
+        .filterTry(filterFoundCheckedPredicate)
+        .filterTry(filterFoundCheckedPredicate, noSuchElementExceptionSupplier)
+        .filterTry(filterFoundCheckedPredicate, new NoSuchElementException())
+        .filterTry(filterFoundCheckedPredicate, value -> new IllegalArgumentException())
+        .filter(filterFoundPredicate)
+        .filter(filterFoundPredicate, noSuchElementExceptionSupplier)
+        .filter(filterFoundPredicate, new NoSuchElementException())
+        .filter(filterFoundPredicate, value -> new IllegalArgumentException())
+        // end:filter-found
         .mapTry(toUpperCase)
         .map(doNothingMapper)
         .mapTry(toLength)
@@ -142,8 +196,12 @@ class TryTest {
 
     // then
     assertThat(counter.getExecutedOperations())
-        .hasSize(10)
-        .containsExactly("stringThrowableCheckedSupplier", "toUpperCase", "doNothingMapper",
+        .containsExactly("stringThrowableCheckedSupplier",
+            "filterFoundCheckedPredicate", "filterFoundCheckedPredicate",
+            "filterFoundCheckedPredicate", "filterFoundCheckedPredicate",
+            "filterFoundPredicate", "filterFoundPredicate",
+            "filterFoundPredicate", "filterFoundPredicate",
+            "toUpperCase", "doNothingMapper",
             "toLength", "checkedRunnable", "runnable", "checkedConsumer", "consumer", "multiplyTwo",
             "doNothingFlatMapper");
     assertThat(result.isSuccess())
@@ -185,7 +243,6 @@ class TryTest {
 
     // then
     assertThat(counter.getExecutedOperations())
-        .hasSize(2)
         .containsExactly("stringThrowableCheckedSupplier", "toUpperCaseErroneous");
     assertThat(result.isError())
         .isTrue();
@@ -370,7 +427,6 @@ class TryTest {
 
     private void assertRecovered(final TryResult<Integer> result, final String recover) {
       assertThat(counter.getExecutedOperations())
-          .hasSize(10)
           .containsExactly("stringThrowableCheckedSupplier", "toUpperCaseErroneous", recover,
               "toLength", "checkedRunnable", "runnable", "checkedConsumer", "consumer",
               "multiplyTwo", "doNothingFlatMapper");
@@ -378,6 +434,182 @@ class TryTest {
           .isTrue();
       assertThat(result.get())
           .isEqualTo(RESULT_VALUE);
+    }
+  }
+
+  @Nested
+  class Filter {
+
+    @Test
+    void shouldReturnDefaultExceptionWhenNotMatchedFilterTry() {
+      // given
+      final Try<String> execution = Try.ofTry(stringThrowableCheckedSupplier)
+          // start:filter-found
+          .filterTry(filterNotFoundCheckedPredicate)
+          .mapTry(toUpperCase)
+          .map(doNothingMapper);
+
+      // when
+      final TryResult<String> result = execution.execute();
+
+      // then
+      assertThat(counter.getExecutedOperations())
+          .containsExactly("stringThrowableCheckedSupplier", "filterNotFoundCheckedPredicate");
+      assertThat(result.isError())
+          .isTrue();
+      assertThat(result.getError())
+          .isInstanceOf(TryFilterNoSuchElementException.class);
+    }
+
+    @Test
+    void shouldReturnDefaultExceptionWhenNotMatchedFilter() {
+      // given
+      final Try<String> execution = Try.ofTry(stringThrowableCheckedSupplier)
+          // start:filter-found
+          .filter(filterNotFoundPredicate)
+          .mapTry(toUpperCase)
+          .map(doNothingMapper);
+
+      // when
+      final TryResult<String> result = execution.execute();
+
+      // then
+      assertThat(counter.getExecutedOperations())
+          .containsExactly("stringThrowableCheckedSupplier", "filterNotFoundPredicate");
+      assertThat(result.isError())
+          .isTrue();
+      assertThat(result.getError())
+          .isInstanceOf(TryFilterNoSuchElementException.class);
+    }
+
+    @Test
+    void shouldReturnProvidedExceptionWhenNotMatchedFilterTry() {
+      // given
+      final Try<String> execution = Try.ofTry(stringThrowableCheckedSupplier)
+          // start:filter-found
+          .filterTry(filterNotFoundCheckedPredicate, new NoSuchElementException())
+          .mapTry(toUpperCase)
+          .map(doNothingMapper);
+
+      // when
+      final TryResult<String> result = execution.execute();
+
+      // then
+      assertThat(counter.getExecutedOperations())
+          .containsExactly("stringThrowableCheckedSupplier", "filterNotFoundCheckedPredicate");
+      assertThat(result.isError())
+          .isTrue();
+      assertThat(result.getError())
+          .isInstanceOf(NoSuchElementException.class);
+    }
+
+    @Test
+    void shouldReturnProvidedExceptionWhenNotMatchedFilter() {
+      // given
+      final Try<String> execution = Try.ofTry(stringThrowableCheckedSupplier)
+          // start:filter-found
+          .filter(filterNotFoundPredicate, new NoSuchElementException())
+          .mapTry(toUpperCase)
+          .map(doNothingMapper);
+
+      // when
+      final TryResult<String> result = execution.execute();
+
+      // then
+      assertThat(counter.getExecutedOperations())
+          .containsExactly("stringThrowableCheckedSupplier", "filterNotFoundPredicate");
+      assertThat(result.isError())
+          .isTrue();
+      assertThat(result.getError())
+          .isInstanceOf(NoSuchElementException.class);
+    }
+
+    @Test
+    void shouldReturnSuppliedExceptionWhenNotMatchedFilterTry() {
+      // given
+      final Try<String> execution = Try.ofTry(stringThrowableCheckedSupplier)
+          // start:filter-found
+          .filterTry(filterNotFoundCheckedPredicate,
+              (Supplier<? extends Throwable>) NoSuchElementException::new)
+          .mapTry(toUpperCase)
+          .map(doNothingMapper);
+
+      // when
+      final TryResult<String> result = execution.execute();
+
+      // then
+      assertThat(counter.getExecutedOperations())
+          .containsExactly("stringThrowableCheckedSupplier", "filterNotFoundCheckedPredicate");
+      assertThat(result.isError())
+          .isTrue();
+      assertThat(result.getError())
+          .isInstanceOf(NoSuchElementException.class);
+    }
+
+    @Test
+    void shouldReturnSuppliedExceptionWhenNotMatchedFilter() {
+      // given
+      final Try<String> execution = Try.ofTry(stringThrowableCheckedSupplier)
+          // start:filter-found
+          .filter(filterNotFoundPredicate,
+              (Supplier<? extends Throwable>) NoSuchElementException::new)
+          .mapTry(toUpperCase)
+          .map(doNothingMapper);
+
+      // when
+      final TryResult<String> result = execution.execute();
+
+      // then
+      assertThat(counter.getExecutedOperations())
+          .containsExactly("stringThrowableCheckedSupplier", "filterNotFoundPredicate");
+      assertThat(result.isError())
+          .isTrue();
+      assertThat(result.getError())
+          .isInstanceOf(NoSuchElementException.class);
+    }
+
+    @Test
+    void shouldReturnMappedExceptionWhenNotMatchedFilterTry() {
+      // given
+      final Try<String> execution = Try.ofTry(stringThrowableCheckedSupplier)
+          // start:filter-found
+          .filterTry(filterNotFoundCheckedPredicate,
+              (Function<? super String, ? extends Throwable>) NoSuchElementException::new)
+          .mapTry(toUpperCase)
+          .map(doNothingMapper);
+
+      // when
+      final TryResult<String> result = execution.execute();
+
+      // then
+      assertThat(counter.getExecutedOperations())
+          .containsExactly("stringThrowableCheckedSupplier", "filterNotFoundCheckedPredicate");
+      assertThat(result.isError())
+          .isTrue();
+      assertThat(result.getError())
+          .isInstanceOf(NoSuchElementException.class);
+    }
+
+    @Test
+    void shouldReturnMappedExceptionWhenNotMatchedFilter() {
+      // given
+      final Try<String> execution = Try.ofTry(stringThrowableCheckedSupplier)
+          // start:filter-found
+          .filter(filterNotFoundPredicate,
+              (Function<? super String, ? extends Throwable>) NoSuchElementException::new)
+          .mapTry(toUpperCase)
+          .map(doNothingMapper);
+
+      // when
+      final TryResult<String> result = execution.execute();
+
+      // then
+      assertThat(counter.getExecutedOperations())
+          .containsExactly("stringThrowableCheckedSupplier", "filterNotFoundPredicate");
+      assertThat(result.isError())
+          .isTrue();
+      assertThat(result.getError())
+          .isInstanceOf(NoSuchElementException.class);
     }
   }
 

@@ -86,6 +86,50 @@ public class Try<T> {
     return peekTry(consumer::accept);
   }
 
+  public Try<T> filterTry(final CheckedPredicate<? super T, ? extends Throwable> predicate,
+      final Function<? super T, ? extends Throwable> noSuchElementException) {
+    return mapTry(value -> {
+      if (predicate.test(value)) {
+        return value;
+      } else {
+        throw noSuchElementException.apply(value);
+      }
+    });
+  }
+
+  public Try<T> filter(final Predicate<? super T> predicate,
+      final Function<? super T, ? extends Throwable> noSuchElementException) {
+    return filterTry(predicate::test, noSuchElementException);
+  }
+
+  public Try<T> filterTry(final CheckedPredicate<? super T, ? extends Throwable> predicate) {
+    return filterTry(predicate, TryFilterNoSuchElementException::new);
+  }
+
+  public Try<T> filter(final Predicate<? super T> predicate) {
+    return filterTry(predicate::test);
+  }
+
+  public Try<T> filterTry(final CheckedPredicate<? super T, ? extends Throwable> predicate,
+      final Supplier<? extends Throwable> noSuchElementException) {
+    return filterTry(predicate, value -> noSuchElementException.get());
+  }
+
+  public Try<T> filter(final Predicate<? super T> predicate,
+      final Supplier<? extends Throwable> noSuchElementException) {
+    return filterTry(predicate::test, noSuchElementException);
+  }
+
+  public Try<T> filterTry(final CheckedPredicate<? super T, ? extends Throwable> predicate,
+      final Throwable noSuchElementException) {
+    return filterTry(predicate, () -> noSuchElementException);
+  }
+
+  public Try<T> filter(final Predicate<? super T> predicate,
+      final Throwable noSuchElementException) {
+    return filter(predicate, () -> noSuchElementException);
+  }
+
   public Try<T> recoverTry(final Predicate<? super Throwable> predicate,
       final CheckedFunction<? super Throwable, ? extends Try<? extends T>, ? extends Throwable> fallback) {
     return new Try<>(nothing -> {

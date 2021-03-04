@@ -60,6 +60,7 @@ UserWithAccountsAndHistory findUserWithAccountsAndHistory(UserId id) {
    TryResult<UserWithAccountsAndHistory> userWithAccountsAndHistory = Try.of(() -> users.getById(id))
      .recover(UserNotFoundException.class, userNotFoundException -> Try.of(() -> userRepository.findUserById(id)))
      .mapTry(userAccountRepository::fetchUserWithAccounts)
+     .filter(userWithAccounts -> !userWithAccounts.getAccounts().isEmpty(), userWithAccounts -> new UserAccountsNotFoundException(userWithAccounts.getId()))
      .peek(userWithAccounts -> log.debug("User {} has {} accounts",user.getUsername(),user.getAccounts().size()))
      .flatMapTry(userAccountRepository::fetchUserWithAccountsAndHistory)
      .execute();
