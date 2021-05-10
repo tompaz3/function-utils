@@ -35,45 +35,53 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * This is an Either type that can hold either left or right value.
+ * It's right biased, so whenever an operation doesn't refer to a member explicitly,
+ * it operates on the right member.
+ */
 public abstract class Either<L, R> {
 
-  public <V> Either<L, V> map(final Function<R, V> mapper) {
-    if (isRight()) {
-      return Either.right(() -> mapper.apply(right().get()));
-    } else {
-      @SuppressWarnings("unchecked") final Either<L, V> that = (Either<L, V>) this;
-      return that;
-    }
-  }
-
-  public <V> Either<L, V> flatMap(final Function<R, Either<L, V>> mapper) {
-    if (isRight()) {
-      return Either.right(() -> mapper.apply(right().get()).right().get());
-    } else {
-      @SuppressWarnings("unchecked") final Either<L, V> that = (Either<L, V>) this;
-      return that;
-    }
-  }
-
-  public <K> Either<K, R> mapLeft(final Function<L, K> mapper) {
+  public <V> Either<L, V> map(final Function<? super R, ? extends V> mapper) {
     if (isLeft()) {
-      return Either.left(() -> mapper.apply(left().get()));
+      @SuppressWarnings("unchecked") final Either<L, V> that = (Either<L, V>) this;
+      return that;
+    } else {
+      return Either.right(() -> mapper.apply(get()));
+    }
+  }
+
+  public <K, V> Either<K, V> flatMap(
+      final Function<? super R, ? extends Either<K, V>> mapper) {
+    if (isLeft()) {
+      @SuppressWarnings("unchecked") final Either<K, V> that = (Either<K, V>) this;
+      return that;
+    } else {
+      return new EitherLazy<>(nothing -> mapper.apply(get()));
+    }
+  }
+
+  public <K> Either<K, R> mapLeft(final Function<? super L, ? extends K> mapper) {
+    if (isLeft()) {
+      return Either.left(() -> mapper.apply(getLeft()));
     } else {
       @SuppressWarnings("unchecked") final Either<K, R> that = (Either<K, R>) this;
       return that;
     }
   }
 
-  public <K> Either<K, R> flatMapLeft(final Function<L, Either<K, R>> mapper) {
-    if (isLeft()) {
-      return Either.left(() -> mapper.apply(left().get()).left().get());
-    } else {
-      @SuppressWarnings("unchecked") final Either<K, R> that = (Either<K, R>) this;
+  public <K, V> Either<K, V> flatMapLeft(
+      final Function<? super L, ? extends Either<K, V>> mapper) {
+    if (isRight()) {
+      @SuppressWarnings("unchecked") final Either<K, V> that = (Either<K, V>) this;
       return that;
+    } else {
+      return new EitherLazy<>(nothing -> mapper.apply(getLeft()));
     }
   }
 
-  <U> U fold(final Function<L, U> leftMapper, final Function<R, U> rightMapper) {
+  <U> U fold(final Function<? super L, ? extends U> leftMapper,
+      final Function<? super R, ? extends U> rightMapper) {
     if (isRight()) {
       return map(rightMapper).get();
     } else {
@@ -81,24 +89,22 @@ public abstract class Either<L, R> {
     }
   }
 
-  public Either<L, R> peek(final Consumer<R> consumer) {
+  public Either<L, R> peek(final Consumer<? super R> consumer) {
     if (isRight()) {
-      return Either.right(() -> {
-        final var value = right().get();
-        consumer.accept(value);
-        return value;
+      return map(right -> {
+        consumer.accept(right);
+        return right;
       });
     } else {
       return this;
     }
   }
 
-  public Either<L, R> peekLeft(final Consumer<L> consumer) {
+  public Either<L, R> peekLeft(final Consumer<? super L> consumer) {
     if (isLeft()) {
-      return Either.left(() -> {
-        final var value = left().get();
-        consumer.accept(value);
-        return value;
+      return mapLeft(left -> {
+        consumer.accept(left);
+        return left;
       });
     } else {
       return this;
@@ -147,9 +153,9 @@ public abstract class Either<L, R> {
     return !isLeft();
   }
 
-  protected abstract Supplier<R> right();
-
-  protected abstract Supplier<L> left();
+  private boolean isWrapper() {
+    return this instanceof Either.EitherLazy;
+  }
 
   public static <L, R> Either<L, R> right(final Supplier<R> supplier) {
     return new Right<>(supplier);
@@ -186,16 +192,6 @@ public abstract class Either<L, R> {
     public boolean isLeft() {
       return false;
     }
-
-    @Override
-    protected Supplier<R> right() {
-      return right;
-    }
-
-    @Override
-    protected Supplier<L> left() {
-      throw new NoSuchElementException("Cannot get left supplier from Either.Right instance.");
-    }
   }
 
   @RequiredArgsConstructor(access = PRIVATE)
@@ -217,15 +213,95 @@ public abstract class Either<L, R> {
     public boolean isLeft() {
       return true;
     }
+  }
+
+  @RequiredArgsConstructor(access = PRIVATE)
+  private static class EitherLazy<L, R> extends Either<L, R> {
+
+    private final Function<Void, Either<L, R>> function;
 
     @Override
-    protected Supplier<R> right() {
-      throw new NoSuchElementException("Cannot get right supplier from Either.Left instance.");
+    public R get() {
+      return function.apply(null).get();
     }
 
     @Override
-    protected Supplier<L> left() {
-      return left;
+    public L getLeft() {
+      return function.apply(null).getLeft();
+    }
+
+    @Override
+    public boolean isLeft() {
+      return function.apply(null).isLeft();
+    }
+
+    @Override
+    public <V> Either<L, V> map(final Function<? super R, ? extends V> mapper) {
+      return new EitherLazy<>(this.function.andThen(either -> either.map(mapper)));
+    }
+
+    @Override
+    public <K, V> Either<K, V> flatMap(final Function<? super R, ? extends Either<K, V>> mapper) {
+      return new EitherLazy<>(this.function.andThen(either -> either.flatMap(mapper)));
+    }
+
+    @Override
+    public <K> Either<K, R> mapLeft(final Function<? super L, ? extends K> mapper) {
+      return new EitherLazy<>(this.function.andThen(either -> {
+        if (either.isLeft()) {
+          return Either.left(() -> mapper.apply(either.getLeft()));
+        } else {
+          @SuppressWarnings("unchecked") final var that = (Either<K, R>) either;
+          return that;
+        }
+      }));
+    }
+
+    @Override
+    public <K, V> Either<K, V> flatMapLeft(
+        final Function<? super L, ? extends Either<K, V>> mapper) {
+      return new EitherLazy<>(this.function.andThen(either -> either.flatMapLeft(mapper)));
+    }
+
+    @Override
+    public Either<L, R> peek(final Consumer<? super R> consumer) {
+      return new EitherLazy<>(this.function.andThen(either -> either.peek(consumer)));
+    }
+
+    @Override
+    public Either<L, R> peekLeft(final Consumer<? super L> consumer) {
+      return new EitherLazy<>(this.function.andThen(either -> either.peekLeft(consumer)));
+    }
+
+    @Override
+    public Either<R, L> swap() {
+      return new EitherLazy<>(this.function.andThen(Either::swap));
+    }
+
+    @Override
+    <U> U fold(final Function<? super L, ? extends U> leftMapper,
+        final Function<? super R, ? extends U> rightMapper) {
+      return this.function.apply(null).fold(leftMapper, rightMapper);
+    }
+
+    @Override
+    public R getOrElse(final Function<? super L, ? extends R> orElse) {
+      return this.function.apply(null).getOrElse(orElse);
+    }
+
+    @Override
+    public R getOrElse(final R orElse) {
+      return this.function.apply(null).getOrElse(orElse);
+    }
+
+    @Override
+    public L getLeftOrElse(final Function<? super R, ? extends L> orElse) {
+      return this.function.apply(null).getLeftOrElse(orElse);
+    }
+
+    @Override
+    public L getLeftOrElse(final L orElse) {
+      return this.function.apply(null).getLeftOrElse(orElse);
     }
   }
 }

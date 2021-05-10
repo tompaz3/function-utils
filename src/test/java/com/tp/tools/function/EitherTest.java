@@ -257,31 +257,29 @@ public class EitherTest {
 
   @Test
   void shouldExecuteLazilyRight() {
-    // given execution registry
+    // given
     final PeekConsumer<Object> registry = new PeekConsumer<>();
-    // and value
-    final Supplier<Long> valueSupplier = () -> {
+
+    // when
+    final var either = Either.right(() -> {
       final var now = System.currentTimeMillis();
       registry.accept(now);
       return now;
-    };
-    // and right
-    final Either<Void, Long> right = Either.right(valueSupplier);
-    // and mapper
-    final Function<Long, Long> mapper = l -> {
-      registry.accept(l + 1);
-      return l + 1;
-    };
-    // and flatMapper
-    final Function<Long, Either<Void, Long>> flatMapper = l -> {
-      registry.accept(l + 1);
-      return Either.right(l + 1);
-    };
-    // and consumer
-    final Consumer<Long> consumer = l -> registry.accept(l + 1);
-
-    // when chain calls
-    final var transformed = right.map(mapper).flatMap(flatMapper).peek(consumer);
+    })
+        .map(l -> {
+          registry.accept(l + 1);
+          return l + 1;
+        })
+        .flatMap(l -> {
+          registry.accept(l + 1);
+          return Either.left(l + 1);
+        })
+        .flatMapLeft(l -> {
+          registry.accept(l + 5);
+          return Either.right(l + 5);
+        })
+        .peek(registry)
+        .peekLeft(registry);
 
     // then nothing called (nothing stored in registry)
     assertThat(registry.consumed).isEmpty();
@@ -289,31 +287,29 @@ public class EitherTest {
 
   @Test
   void shouldExecuteLazilyLeft() {
-    // given execution registry
+    // given
     final PeekConsumer<Object> registry = new PeekConsumer<>();
-    // and value
-    final Supplier<Long> valueSupplier = () -> {
+
+    // when
+    Either.left(() -> {
       final var now = System.currentTimeMillis();
       registry.accept(now);
       return now;
-    };
-    // and left
-    final Either<Long, Void> left = Either.left(valueSupplier);
-    // and mapper
-    final Function<Long, Long> mapper = l -> {
-      registry.accept(l + 1);
-      return l + 1;
-    };
-    // and flatMapper
-    final Function<Long, Either<Long, Void>> flatMapper = l -> {
-      registry.accept(l + 1);
-      return Either.left(l + 1);
-    };
-    // and consumer
-    final Consumer<Long> consumer = l -> registry.accept(l + 1);
-
-    // when chain calls
-    final var transformed = left.mapLeft(mapper).flatMapLeft(flatMapper).peekLeft(consumer);
+    })
+        .mapLeft(l -> {
+          registry.accept(l + 1);
+          return l + 1;
+        })
+        .flatMapLeft(l -> {
+          registry.accept(l + 1);
+          return Either.right(l + 1);
+        })
+        .flatMap(l -> {
+          registry.accept(l + 5);
+          return Either.left(l + 5);
+        })
+        .peekLeft(registry)
+        .peek(registry);
 
     // then nothing called (nothing stored in registry)
     assertThat(registry.consumed).isEmpty();
