@@ -247,14 +247,7 @@ public abstract class Either<L, R> {
 
     @Override
     public <K> Either<K, R> mapLeft(final Function<? super L, ? extends K> mapper) {
-      return new EitherLazy<>(this.function.andThen(either -> {
-        if (either.isLeft()) {
-          return Either.left(() -> mapper.apply(either.getLeft()));
-        } else {
-          @SuppressWarnings("unchecked") final var that = (Either<K, R>) either;
-          return that;
-        }
-      }));
+      return new EitherLazy<>(this.function.andThen(either -> either.mapLeft(mapper)));
     }
 
     @Override
