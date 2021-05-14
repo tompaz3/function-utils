@@ -10,6 +10,21 @@
 
 package com.tp.tools.function.exception;
 
+/**
+ * Predicate interface which may throw a {@link Throwable}.
+ *
+ * @param <T> tested type.
+ * @param <E> throwable type.
+ */
 public interface CheckedPredicate<T, E extends Throwable> {
+
+  /**
+   * Verifies whether provided <code>value</code> passes the test.
+   * May throw a {@link Throwable}.
+   *
+   * @param value tested value.
+   * @return <code>true</code> when value pusses the test, <code>false</code> otherwise.
+   * @throws E throwable type.
+   */
   boolean test(T value) throws E;
 }

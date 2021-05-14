@@ -10,7 +10,22 @@
 
 package com.tp.tools.function.exception;
 
+/**
+ * Function interface which may throw a {@link Throwable}.
+ *
+ * @param <T> consumed type.
+ * @param <V> produced type.
+ * @param <E> throwable type.
+ */
 public interface CheckedFunction<T, V, E extends Throwable> {
 
+  /**
+   * Transforms parameter of type <code>T</code> into an object of type <code>V</code>.
+   * May throw a {@link Throwable}.
+   *
+   * @param t consumed value.
+   * @return new object of type <code>V</code>.
+   * @throws E throwable type.
+   */
   V apply(T t) throws E;
 }

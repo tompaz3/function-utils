@@ -10,10 +10,21 @@
 
 package com.tp.tools.function.exception;
 
+import java.util.function.Predicate;
+
+/**
+ * Exception thrown by default by {@link Try#filterTry(CheckedPredicate)} and {@link
+ * Try#filter(Predicate)}
+ * methods when value held by {@link Try} instance does not pass the predicate test.
+ */
 public class TryFilterNoSuchElementException extends RuntimeException {
 
   private static final long serialVersionUID = -948362256985696178L;
 
+  /**
+   * Instantiates this class generating message based on given <code>value</code> parameter.
+   * @param value value used for exception message generation.
+   */
   public TryFilterNoSuchElementException(final Object value) {
     super("Predicate condition not met for value " + value);
   }

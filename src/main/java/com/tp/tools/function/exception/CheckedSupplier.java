@@ -10,7 +10,19 @@
 
 package com.tp.tools.function.exception;
 
+/**
+ * Supplier interface which may throw a {@link Throwable}.
+ *
+ * @param <T> produced / supplied type.
+ * @param <E> throwable type.
+ */
 public interface CheckedSupplier<T, E extends Throwable> {
 
+  /**
+   * Produces / supplies an object of type <code>T</code>.
+   *
+   * @return type <code>T</code> object.
+   * @throws E throwable type.
+   */
   T get() throws E;
 }

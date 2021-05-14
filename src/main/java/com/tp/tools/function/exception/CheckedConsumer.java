@@ -10,7 +10,19 @@
 
 package com.tp.tools.function.exception;
 
+/**
+ * Consumer interface which may throw a {@link Throwable}
+ *
+ * @param <T> consumed type.
+ * @param <E> throwable type.
+ */
 public interface CheckedConsumer<T, E extends Throwable> {
 
+  /**
+   * Consumes given value. May throw a {@link Throwable}.
+   *
+   * @param value consumed value.
+   * @throws E throwable type.
+   */
   void accept(T value) throws E;
 }

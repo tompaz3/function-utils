@@ -10,11 +10,23 @@
 
 package com.tp.tools.function.transaction;
 
+/**
+ * Transaction manager used by {@link Transactional} for managing transaction.
+ */
 public interface TransactionManager {
 
+  /**
+   * Begins / creates a transaction.
+   */
   void begin();
 
+  /**
+   * Commits a transaction.
+   */
   void commit();
 
+  /**
+   * Rollbacks a transaction.
+   */
   void rollback();
 }

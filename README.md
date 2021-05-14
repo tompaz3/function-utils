@@ -10,6 +10,9 @@ Features delivered by this library are:
 1. `Locker` - monadic type helping wrapping the code within a lock.
 1. `FluentChain` - monadic type helper for builder-like operations. Created due to the lack of some
    sensible solution to conditionally call method chains (especially some fluent builders).
+   
+Experimental / unfinished
+1. `Ior` - inclusive-or type which can contain either Left or Right or Both.
 
 ## Either
 
@@ -63,23 +66,25 @@ UserWithAccountsAndHistory findUserWithAccountsAndHistory(UserId id) {
      .filter(userWithAccounts -> !userWithAccounts.getAccounts().isEmpty(), userWithAccounts -> new UserAccountsNotFoundException(userWithAccounts.getId()))
      .peek(userWithAccounts -> log.debug("User {} has {} accounts",user.getUsername(),user.getAccounts().size()))
      .flatMapTry(userAccountRepository::fetchUserWithAccountsAndHistory)
-     .execute();
-     
-   return userWithAccountsAndHistory.onError(UserNotFoundException.class, () -> log.warn("User with id {} not found", id))
-     .onError(exception -> log.error("Could not fetch user with accounts and history for user id {}", id))
-     .onErrorThrow(exception -> exception instanceof HttpConnectionException 
-            && ((HttpConnectionException)exception).isTimeout(), TimeoutException::new)
-     .onSuccess(this::notifyUserAccountsAndHistoryAccessed)
-     .fold(exception -> UserWithAccountsAndHistory.none(), Function.identity());
-}
+        .execute();
+
+        return userWithAccountsAndHistory.onError(UserNotFoundException.class,()->log.warn("User with id {} not found",id))
+        .onError(exception->log.error("Could not fetch user with accounts and history for user id {}",id))
+        .onErrorThrow(exception->exception instanceof HttpConnectionException
+        &&((HttpConnectionException)exception).isTimeout(),TimeoutException::new)
+        .onSuccess(this::notifyUserAccountsAndHistoryAccessed)
+        .fold(exception->UserWithAccountsAndHistory.none(),Function.identity());
+        }
 ```
 
 ## Transactional
 
-`Transactional` monad helps to execute the logic within a transaction. No logic is executed until `execute()`
+`Transactional` monad helps to execute the logic within a transaction. No logic is executed
+until `execute()`
 method is called. `Transactional` monad is highly dependent from `Try` and `TryResult` monad.
 
-Requires `TransactionManager` implementation which provides methods for managing transaction: `begin()`,
+Requires `TransactionManager` implementation which provides methods for managing
+transaction: `begin()`,
 `commit()`, `rollback()`.
 
 Example usage:

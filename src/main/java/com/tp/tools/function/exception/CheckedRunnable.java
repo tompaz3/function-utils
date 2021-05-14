@@ -10,7 +10,17 @@
 
 package com.tp.tools.function.exception;
 
+/**
+ * Runnable interface which may throw a {@link Throwable}.
+ *
+ * @param <E> throwable type.
+ */
 public interface CheckedRunnable<E extends Throwable> {
 
+  /**
+   * Executes an action. May throw a {@link Throwable}.
+   *
+   * @throws E throwable type.
+   */
   void run() throws E;
 }

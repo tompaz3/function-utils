@@ -12,9 +12,22 @@ package com.tp.tools.function.lock;
 
 import com.tp.tools.function.exception.Try;
 
+/**
+ * Lock abstraction used by {@link Locker} to obtain and release lock.
+ */
 public interface Lock {
 
+  /**
+   * Lock resource. Informs about lock execution result returning {@link Try} instance.
+   *
+   * @return lock execution result.
+   */
   Try<Void> lock();
 
+  /**
+   * Unlock resource. Informs about unlock execution result returning {@link Try} instance.
+   *
+   * @return lock execution result.
+   */
   Try<Void> unlock();
 }
