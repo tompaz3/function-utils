@@ -177,6 +177,10 @@ public class HazelcastLockRegistry {
 }
 ```
 
+### Ior
+
+TODO: provide docs and example
+
 ## Experimental Features
 
 ### FluentChain
