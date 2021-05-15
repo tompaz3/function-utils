@@ -2,30 +2,35 @@
 Small util library with some functional style classes (usually monads).
 
 ## Features
+
 Features delivered by this library are:
+
 1. `Either` - monadic sum type (coproduct) containing Left | Right.
 1. `Try` - monadic type allowing `try-catch` operations to be executed in a monadic way with some
    utility methods.
 1. `Transactional` - monadic type wrapping transactional executions.
 1. `Locker` - monadic type helping wrapping the code within a lock.
-1. `FluentChain` - monadic type helper for builder-like operations. Created due to the lack of some
-   sensible solution to conditionally call method chains (especially some fluent builders).
-   
-Experimental / unfinished
 1. `Ior` - inclusive-or type which can contain either Left or Right or Both.
 
-## Either
+Experimental / unfinished
 
-`Either` monad is a typical either/maybe monad. It allows operating on conflicting values, when it's allowed to work on either of the two.
+1. `FluentChain` - monadic type helper for builder-like operations. Created due to the lack of some
+   sensible solution to conditionally call method chains (especially some fluent builders).
+
+### Either
+
+`Either` monad is a typical either/maybe monad. It allows operating on conflicting values, when it's
+allowed to work on either of the two.
 
 Example usage:
 
 ```java
 interface Adult
+
 interface Kid
 
-IdDocument getIdDocument(PersonId personId) {
-  Either<Kid,Adult> kidOrAdult = persons.findPerson(personId);
+IdDocument getIdDocument(PersonId personId){
+        Either<Kid, Adult> kidOrAdult=persons.findPerson(personId);
   return kidOrAdult.fold(
       idRepository::getKidIdDocument,
       idRepository::getAdultIdDocument
@@ -46,8 +51,7 @@ Either<? extends GeneralError, Void> sendMailToUser(UserId userId, Mail mail) {
 }
 ```
 
-
-## Try
+### Try
 
 `Try` monad helps executing and chaining `try-catch` operations in a nice and fluent way. This monad
 is _lazy_, thus no operations are executed until `.execute()` method gets called.
@@ -60,24 +64,27 @@ Example usage:
 
 ```java
 UserWithAccountsAndHistory findUserWithAccountsAndHistory(UserId id) {
-   TryResult<UserWithAccountsAndHistory> userWithAccountsAndHistory = Try.of(() -> users.getById(id))
+  TryResult<UserWithAccountsAndHistory> userWithAccountsAndHistory =
+    Try.of(() -> users.getById(id))
      .recover(UserNotFoundException.class, userNotFoundException -> Try.of(() -> userRepository.findUserById(id)))
      .mapTry(userAccountRepository::fetchUserWithAccounts)
      .filter(userWithAccounts -> !userWithAccounts.getAccounts().isEmpty(), userWithAccounts -> new UserAccountsNotFoundException(userWithAccounts.getId()))
      .peek(userWithAccounts -> log.debug("User {} has {} accounts",user.getUsername(),user.getAccounts().size()))
      .flatMapTry(userAccountRepository::fetchUserWithAccountsAndHistory)
-        .execute();
+     .execute();
 
         return userWithAccountsAndHistory.onError(UserNotFoundException.class,()->log.warn("User with id {} not found",id))
         .onError(exception->log.error("Could not fetch user with accounts and history for user id {}",id))
-        .onErrorThrow(exception->exception instanceof HttpConnectionException
-        &&((HttpConnectionException)exception).isTimeout(),TimeoutException::new)
+        .onErrorThrow(exception->
+          exception instanceof HttpConnectionException
+            &&((HttpConnectionException)exception).isTimeout(),TimeoutException::new
+        )
         .onSuccess(this::notifyUserAccountsAndHistoryAccessed)
         .fold(exception->UserWithAccountsAndHistory.none(),Function.identity());
-        }
+}
 ```
 
-## Transactional
+### Transactional
 
 `Transactional` monad helps to execute the logic within a transaction. No logic is executed
 until `execute()`
@@ -105,7 +112,7 @@ Transactional<UserWithAccount> openAccount(User user, Account account) {
 }
 ```
 
-## Locker
+### Locker
 
 `Locker` monad helps to execute the logic within a transaction. No logic is executed until `execute()`
 method is called. `Locker` monad is highly dependent from `Try` and `TryResult` monad.
@@ -128,7 +135,7 @@ TryResult<Account> getOrCreateUserDefaultAccount() {
 }
 ```
 
-### Lock
+#### Lock
 
 `Lock` is a simple class with `lock()` and `unlock()` methods, used by `Locker` monad.
 
@@ -148,48 +155,53 @@ public class HazelcastLockRegistry {
         username,
         hzLockConfig.getUsernameLeaseDuration());
   }
-  
-  private static class HzMapLock implements Lock {
-    private final Supplier<IMap<Object,Object>> mapSupplier;
-    private final Object key;
-    private final Duration leaseDuration;
-    
-    @Override
-    public Try<Void> lock() {
-      return Try.of(mapSupplier)
-        .map(map -> map.lock(key, leaseDuration.toMillis(), TimeUnit.MILLISECONDS));
-    }
-    
-    @Override
-    public Try<Void> unlock() {
-      return Try.of(mapSupplier)
-          .map(map -> map.unlock(key);
-    }
-  }
+
+   private static class HzMapLock implements Lock {
+
+      private final Supplier<IMap<Object, Object>> mapSupplier;
+      private final Object key;
+      private final Duration leaseDuration;
+
+      @Override
+      public Try<Void> lock() {
+         return Try.of(mapSupplier)
+                 .map(map -> map.lock(key, leaseDuration.toMillis(), TimeUnit.MILLISECONDS));
+      }
+
+      @Override
+      public Try<Void> unlock() {
+         return Try.of(mapSupplier)
+                 .map(map -> map.unlock(key);
+      }
+   }
 }
 ```
 
-## FluentChain
-`FluentChain` was created due to the lack of sensible solution to conditionally method chains.
-The inspiration to create this builder was when I had to work with [Lombok Builder][1]
+## Experimental Features
+
+### FluentChain
+
+`FluentChain` was created due to the lack of sensible solution to conditionally method chains. The
+inspiration to create this builder was when I had to work with [Lombok Builder][1]
 or [Google's Protocol Buffer Builders][2].
 
 There was often a need to call some builder method on condition that source value exists etc., e.g.:
+
 ```java
-Customer fetchCustomer(PersonId id) {
-  Person person = personRestClient.getById(id);
-  CustomerBuilder builder = Customer.builder()
-    .firstName(person.getFirstName())
-    .lastName(person.getLastName());
-  if(person.getAddress() != null) {
-    builder = builder.address(person.getAddress());
-  }
-  if(Period.between(person.getDateOfBirth(), LocalDate.now()).getYears() < ADULT_AGE) {
-    builder = builder.minorAge();
-  }
-  return person.getContact()  // Optional
-    .map(builder::contact)
-    .orElse(builder)
+Customer fetchCustomer(PersonId id){
+        Person person=personRestClient.getById(id);
+        CustomerBuilder builder=Customer.builder()
+        .firstName(person.getFirstName())
+        .lastName(person.getLastName());
+        if(person.getAddress()!=null){
+        builder=builder.address(person.getAddress());
+        }
+        if(Period.between(person.getDateOfBirth(),LocalDate.now()).getYears()<ADULT_AGE){
+        builder=builder.minorAge();
+        }
+        return person.getContact()  // Optional
+        .map(builder::contact)
+        .orElse(builder)
     .build();
 }
 ```

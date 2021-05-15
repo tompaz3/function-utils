@@ -8,18 +8,18 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tp.tools.function;
+package com.tp.tools.function.experimental;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.tp.tools.function.FluentChain.ApplyIf;
-import com.tp.tools.function.FluentChainBuilderTestData.Car;
-import com.tp.tools.function.FluentChainBuilderTestData.CarBuilder;
-import com.tp.tools.function.FluentChainBuilderTestData.Make;
-import com.tp.tools.function.FluentChainBuilderTestData.Model;
-import com.tp.tools.function.FluentChainBuilderTestData.ProductionYear;
-import com.tp.tools.function.FluentChainBuilderTestData.TowBar;
-import com.tp.tools.function.FluentChainBuilderTestData.YesNo;
+import com.tp.tools.function.experimental.FluentChain.ApplyIf;
+import com.tp.tools.function.experimental.FluentChainBuilderTestData.Car;
+import com.tp.tools.function.experimental.FluentChainBuilderTestData.CarBuilder;
+import com.tp.tools.function.experimental.FluentChainBuilderTestData.Make;
+import com.tp.tools.function.experimental.FluentChainBuilderTestData.Model;
+import com.tp.tools.function.experimental.FluentChainBuilderTestData.ProductionYear;
+import com.tp.tools.function.experimental.FluentChainBuilderTestData.TowBar;
+import com.tp.tools.function.experimental.FluentChainBuilderTestData.YesNo;
 import java.time.Year;
 import java.util.Optional;
 import java.util.function.Predicate;
