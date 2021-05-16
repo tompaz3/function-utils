@@ -10,9 +10,8 @@ Features delivered by this library are:
    utility methods.
 1. `Transactional` - monadic type wrapping transactional executions.
 1. `Locker` - monadic type helping wrapping the code within a lock.
-1. `Ior` - inclusive-or type which can contain either Left or Right or Both.
 
-Experimental / unfinished
+Experimental / unstable
 
 1. `FluentChain` - monadic type helper for builder-like operations. Created due to the lack of some
    sensible solution to conditionally call method chains (especially some fluent builders).
@@ -176,10 +175,6 @@ public class HazelcastLockRegistry {
    }
 }
 ```
-
-### Ior
-
-TODO: provide docs and example
 
 ## Experimental Features
 
