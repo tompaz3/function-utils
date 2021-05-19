@@ -26,6 +26,7 @@ import lombok.RequiredArgsConstructor;
  * Operations are lazily evaluated, thus no methods are executed until one of terminal methods is
  * called. Terminal operations are:
  * <ul>
+ *   <li>{@link Either#memoized()}</li>
  *   <li>{@link Either#fold(Function, Function)}</li>
  *   <li>{@link Either#get()}</li>
  *   <li>{@link Either#getLeft()}</li>
@@ -36,6 +37,13 @@ import lombok.RequiredArgsConstructor;
  *   <li>{@link Either#isLeft()}</li>
  *   <li>{@link Either#isRight()}</li>
  * </ul>
+ * <p>
+ *   <b>Gotchas</b>:
+ *   <ul>
+ *     <li>Calling any terminal function will execute the entire function chain, thus it's <b>strongly</b>
+ *     advised to call {@link Either#memoized()} function first, which will execute the entire function chain
+ *     and return a new Ior instance with all values computed.</li>
+ *   </ul>
  */
 public abstract class Either<L, R> {
 
@@ -245,6 +253,15 @@ public abstract class Either<L, R> {
   }
 
   /**
+   * This method will execute the entire function chain and return a result {@link Either} instance
+   * with already computed values. Calling this before other terminal functions ensures function
+   * chain will be evaluated only once.
+   *
+   * @return {@link Either} instance with already evaluated function chain.
+   */
+  public abstract Either<L, R> memoized();
+
+  /**
    * Gets right value of this {@link Either}.
    *
    * @return right value of this {@link Either}.
@@ -330,6 +347,11 @@ public abstract class Either<L, R> {
     private final Supplier<R> right;
 
     @Override
+    public Either<L, R> memoized() {
+      return this;
+    }
+
+    @Override
     public R get() {
       return right.get();
     }
@@ -351,6 +373,11 @@ public abstract class Either<L, R> {
     private final Supplier<L> left;
 
     @Override
+    public Either<L, R> memoized() {
+      return this;
+    }
+
+    @Override
     public R get() {
       throw new NoSuchElementException("Cannot get right value from Either.Left instance.");
     }
@@ -370,6 +397,11 @@ public abstract class Either<L, R> {
   private static class EitherLazy<L, R> extends Either<L, R> {
 
     private final Function<Void, Either<L, R>> function;
+
+    @Override
+    public Either<L, R> memoized() {
+      return function.apply(null);
+    }
 
     @Override
     public R get() {
