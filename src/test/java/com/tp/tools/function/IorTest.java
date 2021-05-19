@@ -10,14 +10,17 @@
 
 package com.tp.tools.function;
 
+import static java.util.stream.Collectors.toUnmodifiableList;
 import static lombok.AccessLevel.PRIVATE;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -68,7 +71,7 @@ class IorTest {
       // given
       final var leftValue = "leftValue";
       final var rightValue = 123;
-      final Ior<String, Integer> ior = Ior.both(leftValue, rightValue);
+      final Ior<String, Integer> ior = Ior.both(leftValue, rightValue, String::concat);
       final Function<Object, String> leftMapper = Object::toString;
       final Function<Integer, String> rightMapper = num -> "Number is " + num;
       final BiFunction<Object, Integer, String> bothMapper =
@@ -138,7 +141,7 @@ class IorTest {
     void getOrElseShouldReturnRightIfIorBoth() {
       // given
       final var value = "rightValue";
-      final var ior = Ior.right(value).withLeft(123);
+      final var ior = Ior.right(value).withLeft(123, Math::addExact);
       final var orElse = "orElse";
 
       // when
@@ -180,7 +183,7 @@ class IorTest {
     void getOrElseFunctionShouldReturnRightIfIorBoth() {
       // given
       final var value = "rightValue";
-      final var ior = Ior.right(value).withLeft(123);
+      final var ior = Ior.right(value).withLeft(123, Math::addExact);
       final Function<Object, String> orElse = left -> "orElse";
 
       // when
@@ -226,7 +229,7 @@ class IorTest {
     void getLeftOrElseShouldReturnLeftIfIorBoth() {
       // given
       final var value = "leftValue";
-      final var ior = Ior.left(value).withRight(123);
+      final var ior = Ior.left(value).withRight(123, String::concat);
       final var orElse = "orElse";
 
       // when
@@ -268,7 +271,7 @@ class IorTest {
     void getLeftOrElseFunctionShouldReturnLeftIfIorBoth() {
       // given
       final var value = "leftValue";
-      final var ior = Ior.left(value).withRight(123);
+      final var ior = Ior.left(value).withRight(123, String::concat);
       final Function<Object, String> orElse = left -> "orElse";
 
       // when
@@ -303,7 +306,7 @@ class IorTest {
       final var ior = Ior.left(value);
 
       // when
-      final var result = ior.swap();
+      final var result = ior.swap((a, b) -> a);
 
       // then
       assertThat(result.isRight()).isTrue();
@@ -317,7 +320,7 @@ class IorTest {
       final var ior = Ior.right(value);
 
       // when
-      final var result = ior.swap();
+      final var result = ior.swap((a, b) -> a);
 
       // then
       assertThat(result.isLeft()).isTrue();
@@ -329,10 +332,10 @@ class IorTest {
       // given
       final var leftValue = "leftValue";
       final var rightValue = 123;
-      final var ior = Ior.left(leftValue).withRight(rightValue);
+      final var ior = Ior.left(leftValue).withRight(rightValue, String::concat);
 
       // when
-      final var result = ior.swap();
+      final var result = ior.swap(Math::addExact);
 
       // then
       assertThat(result.isBoth()).isTrue();
@@ -348,7 +351,7 @@ class IorTest {
     void shouldNotExecuteWhenNoTerminalOperationCalled() {
       // given
       final var registry = new PeekConsumer<>();
-      final var ior = Ior.left("left").withRight(123);
+      final var ior = Ior.left("left").withRight(123, String::concat);
 
       // when
       ior
@@ -356,7 +359,7 @@ class IorTest {
           .mapLeft(left -> {
             registry.accept(left);
             return left;
-          })
+          }, String::concat)
           .peek(registry)
           .map(right -> {
             registry.accept(right);
@@ -375,7 +378,7 @@ class IorTest {
     void shouldExecuteRightWhenRightTerminalOperationCalled() {
       // given
       final var registry = new PeekConsumer<>();
-      final var ior = Ior.left("left").withRight(122);
+      final var ior = Ior.left("left").withRight(122, String::concat);
 
       // when
       final var result = ior
@@ -383,7 +386,7 @@ class IorTest {
           .mapLeft(left -> {
             registry.accept(left);
             return left;
-          })
+          }, String::concat)
           .peek(registry)
           .map(right -> {
             registry.accept(right);
@@ -405,7 +408,7 @@ class IorTest {
     void shouldExecuteLeftWhenLeftTerminalOperationCalled() {
       // given
       final var registry = new PeekConsumer<>();
-      final var ior = Ior.left("left").withRight(122);
+      final var ior = Ior.left("left").withRight(122, String::concat);
 
       // when
       final var result = ior
@@ -413,7 +416,7 @@ class IorTest {
           .mapLeft(left -> {
             registry.accept(left);
             return left;
-          })
+          }, String::concat)
           .peek(registry)
           .map(right -> {
             registry.accept(right);
@@ -435,7 +438,7 @@ class IorTest {
     void shouldExecuteWhenTerminalOperationCalled() {
       // given
       final var registry = new PeekConsumer<>();
-      final var ior = Ior.left("left").withRight(122);
+      final var ior = Ior.left("left").withRight(122, String::concat);
 
       // when
       final var result = ior
@@ -443,7 +446,7 @@ class IorTest {
           .mapLeft(left -> {
             registry.accept(left);
             return left;
-          })
+          }, String::concat)
           .peek(registry)
           .map(right -> {
             registry.accept(right);
@@ -457,6 +460,67 @@ class IorTest {
           .isEqualTo("left | 122");
     }
   }
+
+  @Test
+  void shouldNotCallFunctionsMultipleTimesWhenMemoized() {
+    // given
+    final var peekConsumer = new PeekConsumer<String>();
+    final var rightValue = 123;
+
+    // when
+    final var ior = Ior.right(rightValue)
+        .flatMap(right -> {
+          peekConsumer.accept("First");
+          return Ior.right(right * 2);
+        })
+        .map(right -> {
+          peekConsumer.accept("Second");
+          return right;
+        })
+        .memoized()
+        .flatMap(right -> {
+          peekConsumer.accept("Third");
+          return Ior.right(right % 2);
+        })
+        .memoized();
+    ior.isRight();
+    ior.isLeft();
+
+    // then
+    assertThat(peekConsumer.consumed)
+        .hasSize(3)
+        .containsExactly("First", "Second", "Third");
+  }
+
+  @Test
+  void shouldCombineLeftValuesDWithGivenCombiner() {
+    // given
+    final var leftFirstValue = "abc";
+    final var leftSecondValue = "xyz";
+    final var rightValue = 123;
+    final var ior = Ior.left(List.of(leftFirstValue))
+        .withRight(rightValue,
+            (a, b) -> {
+              System.out.println("Combiner executed");
+              return Stream.of(a, b)
+                  .flatMap(Collection::stream)
+                  .collect(toUnmodifiableList());
+            }
+        );
+
+    // when
+    final var resultIor = ior.flatMap(right -> {
+      System.out.println("Executed");
+      return Ior.left(List.of(leftSecondValue));
+    }).memoized();
+
+    // then
+    assertThat(resultIor.isLeft())
+        .isTrue();
+    assertThat(resultIor.getLeft())
+        .containsExactly(leftFirstValue, leftSecondValue);
+  }
+
 
   @RequiredArgsConstructor(access = PRIVATE)
   private static class PeekConsumer<T> implements Consumer<T> {
