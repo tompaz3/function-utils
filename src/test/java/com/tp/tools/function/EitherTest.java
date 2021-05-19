@@ -363,6 +363,42 @@ public class EitherTest {
     assertThat(registry.consumed).hasSize(4);
   }
 
+  @Test
+  void shouldNotCallFunctionsMultipleTimesWhenMemoized() {
+    // given
+    final var peekConsumer = new PeekConsumer<String>();
+    final var rightValue = 123;
+
+    // when
+    final var either = Either.right(rightValue)
+        .flatMap(right -> {
+          peekConsumer.accept("First");
+          return Either.right(right * 2);
+        })
+        .map(right -> {
+          peekConsumer.accept("Second");
+          return right;
+        })
+        .memoized()
+        .flatMap(right -> {
+          peekConsumer.accept("Third");
+          return Either.right(right % 2);
+        })
+        .memoized();
+    either.isRight();
+    either.isLeft();
+
+    // then
+    assertThat(peekConsumer.consumed.keySet())
+        .hasSize(3)
+        .contains("First", "Second", "Third");
+    assertThat(peekConsumer.consumed.values())
+        .containsExactly(
+            PeekConsumer.INITIAL_COUNTER_VALUE,
+            PeekConsumer.INITIAL_COUNTER_VALUE,
+            PeekConsumer.INITIAL_COUNTER_VALUE
+        );
+  }
 
   private static class PeekConsumer<T> implements Consumer<T> {
 
