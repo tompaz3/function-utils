@@ -32,6 +32,9 @@ public class MergedList<T> extends AbstractList<T> {
     this.size = Arrays.stream(lists).mapToInt(List::size).sum();
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public T get(final int index) {
     if (index < 0 || index >= this.size) {
@@ -50,16 +53,32 @@ public class MergedList<T> extends AbstractList<T> {
         : get(index - list.size(), listIndex + 1);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public int size() {
     return size;
   }
 
+  /**
+   * Instantiates new {@link MergedList} containing given <code>lists</code>.
+   *
+   * @param lists lists to be merged.
+   * @param <T>   list element type.
+   * @return new {@link MergedList} instance.
+   */
   @SafeVarargs
   public static <T> MergedList<T> of(final List<T>... lists) {
     return new MergedList<>(lists);
   }
 
+  /**
+   * Provides empty {@link MergedList} instance.
+   *
+   * @param <T> list element type.
+   * @return empty {@link MergedList} instance.
+   */
   public static <T> MergedList<T> empty() {
     @SuppressWarnings("unchecked") final var empty = (MergedList<T>) EMPTY;
     return empty;
