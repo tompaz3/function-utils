@@ -12,10 +12,12 @@ package com.tp.tools.function;
 
 import static lombok.AccessLevel.PRIVATE;
 
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
@@ -38,6 +40,8 @@ import lombok.RequiredArgsConstructor;
  *   <li>{@link Ior#isRight()}</li>
  *   <li>{@link Ior#isLeft()}</li>
  *   <li>{@link Ior#isBoth()}</li>
+ *   <li>{@link Ior#toOptional()}</li>
+ *   <li>{@link Ior#stream()}</li>
  * </ul>
  * <p>
  *   <b>Gotchas</b>:
@@ -331,6 +335,29 @@ public abstract class Ior<L, R> {
    *                                       both instance).
    */
   public abstract <V> Ior<L, V> withRight(Supplier<V> right, Combiner<L> combiner);
+
+  /**
+   * Returns empty {@link Optional} if this {@link Ior} instance is left (ignoring the left
+   * value).
+   * Returns {@link Optional} with right value of this {@link Ior} instance, otherwise.
+   *
+   * @return {@link Optional} instance.
+   */
+  public Optional<R> toOptional() {
+    return isLeft() ? Optional.empty() : Optional.of(get());
+  }
+
+  /**
+   * Returns empty {@link Stream} if this {@link Ior} instance is left (ignoring the left
+   * value).
+   * Returns {@link Stream} with right value of this {@link Ior} instance, otherwise.
+   *
+   * @return {@link Stream} instance.
+   */
+  // TODO: consider making it lazy
+  public Stream<R> stream() {
+    return toOptional().stream();
+  }
 
   /**
    * Creates {@link Ior} right instance with value supplier.

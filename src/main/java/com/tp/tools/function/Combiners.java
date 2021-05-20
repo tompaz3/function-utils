@@ -56,6 +56,26 @@ public final class Combiners {
   }
 
   /**
+   * Returns first value.
+   *
+   * @param <T> value type.
+   * @return first value.
+   */
+  public static <T> Combiner<T> first() {
+    return (first, second) -> first;
+  }
+
+  /**
+   * Returns second value.
+   *
+   * @param <T> value type.
+   * @return second value.
+   */
+  public static <T> Combiner<T> second() {
+    return (first, second) -> second;
+  }
+
+  /**
    * Concatenates {@link List lists}. Returns {@link MergedList},
    * which is a wrapper / concatenation of lists, preserving order.
    * {@link MergedList} is immutable.

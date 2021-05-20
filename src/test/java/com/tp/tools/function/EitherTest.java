@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class EitherTest {
@@ -398,6 +399,70 @@ class EitherTest {
             PeekConsumer.INITIAL_COUNTER_VALUE,
             PeekConsumer.INITIAL_COUNTER_VALUE
         );
+  }
+
+  @Nested
+  class ToOptionalMappingTests {
+
+    @Test
+    void shouldMapToEmptyOptionalWhenLeft() {
+      // given
+      final var either = Either.left("abc");
+
+      // when
+      final var optional = either.toOptional();
+
+      // then
+      assertThat(optional)
+          .isEmpty();
+    }
+
+    @Test
+    void shouldMapToSomeOptionalWhenRight() {
+      // given
+      final var value = "abc";
+      final var either = Either.right(value);
+
+      // when
+      final var optional = either.toOptional();
+
+      // then
+      assertThat(optional)
+          .isNotEmpty()
+          .hasValue(value);
+    }
+  }
+
+  @Nested
+  class ToStreamMappingTests {
+
+    @Test
+    void shouldMapToEmptyStreamWhenLeft() {
+      // given
+      final var either = Either.left("abc");
+
+      // when
+      final var stream = either.stream();
+
+      // then
+      assertThat(stream)
+          .isEmpty();
+    }
+
+    @Test
+    void shouldMapToNonEmptyStreamWhenRight() {
+      // given
+      final var value = "abc";
+      final var either = Either.right(value);
+
+      // when
+      final var stream = either.stream();
+
+      // then
+      assertThat(stream)
+          .singleElement()
+          .isEqualTo(value);
+    }
   }
 
   private static class PeekConsumer<T> implements Consumer<T> {

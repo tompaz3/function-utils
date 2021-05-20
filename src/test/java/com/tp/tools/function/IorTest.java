@@ -521,6 +521,100 @@ class IorTest {
         .containsExactly(leftFirstValue, leftSecondValue);
   }
 
+  @Nested
+  class ToOptionalMappingTests {
+
+    @Test
+    void shouldMapToEmptyOptionalWhenLeft() {
+      // given
+      final var ior = Ior.left("abc");
+
+      // when
+      final var optional = ior.toOptional();
+
+      // then
+      assertThat(optional)
+          .isEmpty();
+    }
+
+    @Test
+    void shouldMapToSomeOptionalWhenRight() {
+      // given
+      final var value = "abc";
+      final var ior = Ior.right(value);
+
+      // when
+      final var optional = ior.toOptional();
+
+      // then
+      assertThat(optional)
+          .isNotEmpty()
+          .hasValue(value);
+    }
+
+    @Test
+    void shouldMapToSomeOptionalWhenBoth() {
+      // given
+      final var value = "abc";
+      final var ior = Ior.left(123).withRight(value, Combiners.first());
+
+      // when
+      final var optional = ior.toOptional();
+
+      // then
+      assertThat(optional)
+          .isNotEmpty()
+          .hasValue(value);
+    }
+  }
+
+  @Nested
+  class ToStreamMappingTests {
+
+    @Test
+    void shouldMapToEmptyStreamWhenLeft() {
+      // given
+      final var ior = Ior.left("abc");
+
+      // when
+      final var stream = ior.stream();
+
+      // then
+      assertThat(stream)
+          .isEmpty();
+    }
+
+    @Test
+    void shouldMapToNonEmptyStreamWhenRight() {
+      // given
+      final var value = "abc";
+      final var ior = Ior.right(value);
+
+      // when
+      final var stream = ior.stream();
+
+      // then
+      assertThat(stream)
+          .singleElement()
+          .isEqualTo(value);
+    }
+
+    @Test
+    void shouldMapToNonEmptyStreamWhenBoth() {
+      // given
+      final var value = "abc";
+      final var ior = Ior.left(123).withRight(value, Combiners.first());
+
+      // when
+      final var stream = ior.stream();
+
+      // then
+      assertThat(stream)
+          .singleElement()
+          .isEqualTo(value);
+    }
+  }
+
 
   @RequiredArgsConstructor(access = PRIVATE)
   private static class PeekConsumer<T> implements Consumer<T> {

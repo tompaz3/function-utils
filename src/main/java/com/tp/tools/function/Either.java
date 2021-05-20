@@ -13,9 +13,11 @@ package com.tp.tools.function;
 import static lombok.AccessLevel.PRIVATE;
 
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -36,6 +38,8 @@ import lombok.RequiredArgsConstructor;
  *   <li>{@link Either#getLeftOrElse(Function)}</li>
  *   <li>{@link Either#isLeft()}</li>
  *   <li>{@link Either#isRight()}</li>
+ *   <li>{@link Either#toOptional()}</li>
+ *   <li>{@link Either#stream()}</li>
  * </ul>
  * <p>
  *   <b>Gotchas</b>:
@@ -291,6 +295,29 @@ public abstract class Either<L, R> {
    */
   public boolean isRight() {
     return !isLeft();
+  }
+
+  /**
+   * Returns empty {@link Optional} if this {@link Either} instance is left (ignoring the left
+   * value).
+   * Returns {@link Optional} with right value of this {@link Either} instance, otherwise.
+   *
+   * @return {@link Optional} instance.
+   */
+  public Optional<R> toOptional() {
+    return isLeft() ? Optional.empty() : Optional.of(get());
+  }
+
+  /**
+   * Returns empty {@link Stream} if this {@link Either} instance is left (ignoring the left
+   * value).
+   * Returns {@link Stream} with right value of this {@link Either} instance, otherwise.
+   *
+   * @return {@link Stream} instance.
+   */
+  // TODO: consider making it lazy
+  public Stream<R> stream() {
+    return toOptional().stream();
   }
 
   /**
