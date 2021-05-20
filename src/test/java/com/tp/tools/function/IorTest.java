@@ -359,7 +359,7 @@ class IorTest {
           .mapLeft(left -> {
             registry.accept(left);
             return left;
-          }, String::concat)
+          })
           .peek(registry)
           .map(right -> {
             registry.accept(right);
@@ -386,7 +386,7 @@ class IorTest {
           .mapLeft(left -> {
             registry.accept(left);
             return left;
-          }, String::concat)
+          })
           .peek(registry)
           .map(right -> {
             registry.accept(right);
@@ -416,7 +416,7 @@ class IorTest {
           .mapLeft(left -> {
             registry.accept(left);
             return left;
-          }, String::concat)
+          })
           .peek(registry)
           .map(right -> {
             registry.accept(right);
@@ -446,7 +446,7 @@ class IorTest {
           .mapLeft(left -> {
             registry.accept(left);
             return left;
-          }, String::concat)
+          })
           .peek(registry)
           .map(right -> {
             registry.accept(right);

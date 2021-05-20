@@ -85,6 +85,16 @@ public abstract class Ior<L, R> {
       Combiner<K> combiner);
 
   /**
+   * Maps left value held by this {@link Ior} using the given <code>mapper</code> if this {@link
+   * Ior} instance holds left value (is left or both instance).
+   * Does nothing if this {@link Ior} is right instance.
+   *
+   * @param mapper mapper.
+   * @return {@link Ior} with new left value mapped or this {@link Ior} when mapping did not occur.
+   */
+  public abstract Ior<L, R> mapLeft(final Function<? super L, ? extends L> mapper);
+
+  /**
    * Maps left value held by this {@link Ior} using the given <code>mapper</code> to new {@link
    * Ior} instance if this {@link Ior} instance holds left value (is left or both instance).
    * Does nothing if this {@link Ior} is right instance.
@@ -449,6 +459,11 @@ public abstract class Ior<L, R> {
     }
 
     @Override
+    public Ior<L, R> mapLeft(final Function<? super L, ? extends L> mapper) {
+      return this;
+    }
+
+    @Override
     public Ior<L, R> peekLeft(final Consumer<? super L> consumer) {
       return this;
     }
@@ -516,6 +531,11 @@ public abstract class Ior<L, R> {
     @Override
     public <K> Ior<K, R> mapLeft(final Function<? super L, ? extends K> mapper,
         final Combiner<K> combiner) {
+      return Ior.left(() -> mapper.apply(getLeft()));
+    }
+
+    @Override
+    public Ior<L, R> mapLeft(final Function<? super L, ? extends L> mapper) {
       return Ior.left(() -> mapper.apply(getLeft()));
     }
 
@@ -605,6 +625,11 @@ public abstract class Ior<L, R> {
     public <K> Ior<K, R> mapLeft(final Function<? super L, ? extends K> mapper,
         final Combiner<K> combiner) {
       return Ior.both((Supplier<K>) () -> mapper.apply(getLeft()), this::get, combiner);
+    }
+
+    @Override
+    public Ior<L, R> mapLeft(final Function<? super L, ? extends L> mapper) {
+      return Ior.both((Supplier<L>) () -> mapper.apply(getLeft()), this::get, this.combiner);
     }
 
     @Override
@@ -716,6 +741,11 @@ public abstract class Ior<L, R> {
     public <K> Ior<K, R> mapLeft(final Function<? super L, ? extends K> mapper,
         final Combiner<K> combiner) {
       return new IorLazy<>(this.function.andThen(ior -> ior.mapLeft(mapper, combiner)));
+    }
+
+    @Override
+    public Ior<L, R> mapLeft(final Function<? super L, ? extends L> mapper) {
+      return new IorLazy<>(this.function.andThen(ior -> ior.mapLeft(mapper)));
     }
 
     @Override
