@@ -21,6 +21,8 @@ import java.util.List;
  */
 public class MergedList<T> extends AbstractList<T> {
 
+  private static final MergedList<Object> EMPTY = MergedList.of();
+
   private final List<T>[] lists;
   private final int size;
 
@@ -56,5 +58,10 @@ public class MergedList<T> extends AbstractList<T> {
   @SafeVarargs
   public static <T> MergedList<T> of(final List<T>... lists) {
     return new MergedList<>(lists);
+  }
+
+  public static <T> MergedList<T> empty() {
+    @SuppressWarnings("unchecked") final var empty = (MergedList<T>) EMPTY;
+    return empty;
   }
 }
