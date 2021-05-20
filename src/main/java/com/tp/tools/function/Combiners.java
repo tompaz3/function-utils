@@ -68,10 +68,12 @@ public final class Combiners {
    */
   public static <T> Combiner<List<T>> listNullSafe() {
     return (first, second) ->
+        //@formatter:off
         isNull(first)
             ? isNull(second)
-            ? MergedList.empty()
-            : MergedList.of(second)
+              ? MergedList.empty()
+              : MergedList.of(second)
+            //@formatter:on
             : isNull(second)
                 ? MergedList.of(first)
                 : MergedList.of(first, second);
@@ -82,9 +84,9 @@ public final class Combiners {
    * which is a wrapper / concatenation of lists, preserving order.
    * {@link MergedList} is immutable.
    * <p>
-   * For <code>null</code> safety, see {@link Combiners#listNullSafe()}.
    * This combiner may return broken {@link MergedList} instance
    * if any parameter is <code>null</code>.
+   * For <code>null</code> safety, see {@link Combiners#listNullSafe()}.
    *
    * @param <T> list element type.
    * @return concatenated list.
@@ -95,7 +97,34 @@ public final class Combiners {
 
   /**
    * Concatenates {@link LinkedList linked lists}.
-   * May return broken {@link LinkedList} instance if any parameter is <code>null</code>.
+   * <p>
+   * It's null-safe, returns empty LinkedList if both elements are empty.
+   * If any element is null, returns the other.
+   * If both elements are non-null, returns result of adding second to first
+   * (<code>first.add(second)</code>).
+   *
+   * @param <T> list element type.
+   * @return concatenated list.
+   */
+  public static <T> Combiner<LinkedList<T>> linkedListNullSafe() {
+    return (first, second) ->
+        //@formatter:off
+        isNull(first)
+          ? isNull(second)
+            ? LinkedList.empty()
+            : second
+          : isNull(second)
+             //@formatter:on
+              ? first
+              : first.addAll(second);
+  }
+
+  /**
+   * Concatenates {@link LinkedList linked lists}.
+   * <p>
+   * This combiner may return broken {@link LinkedList} instance if any parameter is
+   * <code>null</code>.
+   * For <code>null</code> safety, see {@link Combiners#linkedListNullSafe()}.
    *
    * @param <T> list element type.
    * @return concatenated list.
