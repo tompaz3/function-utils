@@ -12,33 +12,103 @@ package com.tp.tools.function.data;
 
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.Optional;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+/**
+ * LinkedList implementation.
+ *
+ * @param <T> list element type.
+ */
 public interface LinkedList<T> extends Iterable<T> {
 
+  /**
+   * Returns first element of the list.
+   *
+   * @return first element of the list.
+   */
   T head();
 
+  /**
+   * Returns first element of the list, if exists.
+   *
+   * @return first element of the list, if exists.
+   */
+  Optional<T> headOptional();
+
+  /**
+   * Returns all elements but first.
+   *
+   * @return all elements but first.
+   */
   LinkedList<T> tail();
 
+  /**
+   * Adds new element. Results in creation of a new {@link LinkedList} with new element as head.
+   *
+   * @param element element to be added.
+   * @return new {@link LinkedList} with new element as head.
+   */
   LinkedList<T> add(T element);
 
+  /**
+   * Adds all elements of the given <code>linkedList</code>.
+   * Results with a new {@link LinkedList} instance containing all elements of the given
+   * <code>linkedList</code> closest to the head.
+   *
+   * @param linkedList linked list.
+   * @return linked list with new elements.
+   */
   LinkedList<T> add(LinkedList<T> linkedList);
 
+  /**
+   * Adds all elements of the given <code>iterable</code>. Results with a new {@link LinkedList}
+   * instance containing all elements of the given <code>linkedList</code> closest to the head.
+   * Uses {@link LinkedList#add(LinkedList)} internally.
+   *
+   * @param iterable iterable.
+   * @return linked list with new elements.
+   */
   default LinkedList<T> addAll(final Iterable<T> iterable) {
     return add(LinkedList.ofAll(iterable));
   }
 
+  /**
+   * Informs whether this {@link LinkedList} instance is empty or not.
+   *
+   * @return <code>true</code> if this instance is empty, <code>false</code> otherwise.
+   */
   boolean isEmpty();
 
+  /**
+   * Returns size of this {@link LinkedList} instance.
+   *
+   * @return size of this {@link LinkedList} instance.
+   */
   int size();
 
+  /**
+   * Informs whether this {@link LinkedList} instance contains given element (uses {@link
+   * Object#equals(Object)} function for equality).
+   * Has O(n) complexity.
+   *
+   * @param element searched element.
+   * @return <code>true</code> if this {@link LinkedList} instance contains given
+   * <code>element</code>, <code>false</code> otherwise.
+   */
   default boolean contains(final T element) {
     return stream().anyMatch(listElement -> listElement.equals(element));
   }
 
+  /**
+   * Returns {@link LinkedList} instance removing <code>steps</code> elements, starting with head.
+   *
+   * @param steps elements to be removed (steps to be made back).
+   * @return {@link LinkedList} instance without first <code>steps</code> elements.
+   */
   default LinkedList<T> traversBackwards(final int steps) {
     return steps > 0
         ? traverseBackwards(this, steps)
@@ -51,6 +121,11 @@ public interface LinkedList<T> extends Iterable<T> {
         : traverseBackwards(linkedList.tail(), steps - 1);
   }
 
+  /**
+   * Creates a new {@link Stream} based on this {@link LinkedList} instance.
+   *
+   * @return {@link Stream} instance.
+   */
   default Stream<T> stream() {
     return isEmpty()
         ? Stream.empty()
@@ -61,6 +136,9 @@ public interface LinkedList<T> extends Iterable<T> {
         );
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   default void forEach(final Consumer<? super T> action) {
     if (!isEmpty()) {
@@ -68,11 +146,17 @@ public interface LinkedList<T> extends Iterable<T> {
     }
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   default Iterator<T> iterator() {
     return new LinkedListIterator<>(this);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   default Spliterator<T> spliterator() {
     return new LinkedListSpliterator<>(this);
@@ -91,20 +175,48 @@ public interface LinkedList<T> extends Iterable<T> {
         : Stream.concat(Stream.of(head), stream(tail.head(), tail.tail()));
   }
 
+  /**
+   * Returns empty {@link LinkedList} instance.
+   *
+   * @param <T> list element type.
+   * @return empty {@link LinkedList} instance.
+   */
   static <T> LinkedList<T> empty() {
     @SuppressWarnings("unchecked") final LinkedList<T> empty =
         (LinkedList<T>) EmptyLinkedList.EMPTY;
     return empty;
   }
 
+  /**
+   * Creates new {@link LinkedList} instance containing given <code>element</code>.
+   *
+   * @param element element.
+   * @param <T>     list element type.
+   * @return new {@link LinkedList} instance containing given <code>element</code>.
+   */
   static <T> LinkedList<T> of(final T element) {
     return LinkedList.<T>empty().add(element);
   }
 
+  /**
+   * Creates new {@link LinkedList} instance containing given <code>iterable</code>'s elements.
+   *
+   * @param iterable iterable.
+   * @param <T>      list element type.
+   * @return new {@link LinkedList} instance containing given <code>iterable</code>'s elements.
+   */
   static <T> LinkedList<T> ofAll(final Iterable<T> iterable) {
     return ofAll(StreamSupport.stream(iterable.spliterator(), false));
   }
 
+  /**
+   * Creates new {@link LinkedList} instance containing given <code>stream</code>'s elements.
+   * Consumes the <code>stream</code>.
+   *
+   * @param stream stream.
+   * @param <T>    list element type.
+   * @return new {@link LinkedList} instance containing given <code>stream</code>'s elements.
+   */
   static <T> LinkedList<T> ofAll(final Stream<T> stream) {
     return stream.reduce(LinkedList.empty(), LinkedList::add, LinkedList::add);
   }
@@ -120,6 +232,11 @@ public interface LinkedList<T> extends Iterable<T> {
     public T head() {
       throw new UnsupportedOperationException(
           "Head element cannot be retrieved from empty linked list");
+    }
+
+    @Override
+    public Optional<T> headOptional() {
+      return Optional.empty();
     }
 
     @Override
@@ -175,6 +292,11 @@ public interface LinkedList<T> extends Iterable<T> {
     @Override
     public T head() {
       return head;
+    }
+
+    @Override
+    public Optional<T> headOptional() {
+      return Optional.of(head);
     }
 
     @Override
