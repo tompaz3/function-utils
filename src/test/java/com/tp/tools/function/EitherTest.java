@@ -20,7 +20,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 
-public class EitherTest {
+class EitherTest {
 
   @Test
   void foldOnRightShouldApplyRight() {
