@@ -249,4 +249,26 @@ class MergedListTest {
         .isPresent()
         .hasValue("D");
   }
+
+  @Test
+  void shouldSupportIsEmptyWhenEmpty() {
+    // given
+    // when
+    final var mergedList = MergedList.of();
+
+    // then
+    assertThat(mergedList)
+        .isEmpty();
+  }
+
+  @Test
+  void shouldSupportIsEmptyWhenNonEmpty() {
+    // given
+    // when
+    final var mergedList = MergedList.of(List.of("A"));
+
+    // then
+    assertThat(mergedList)
+        .isNotEmpty();
+  }
 }
