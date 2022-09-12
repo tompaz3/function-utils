@@ -10,6 +10,10 @@ Features delivered by this library are:
    utility methods.
 1. `Transactional` - monadic type wrapping transactional executions.
 1. `Locker` - monadic type helping wrapping the code within a lock.
+1. `LinkedList` - functional linked list implementation.
+1. `MergedList` - list wrapper for merged list collection (created by merging multiple other lists).
+1. `TailCall` - tail call optimisation structure (probably very **inefficient**, not yet stress
+   tested).
 
 Experimental / unstable
 
@@ -173,6 +177,112 @@ public class HazelcastLockRegistry {
                  .map(map -> map.unlock(key);
       }
    }
+}
+```
+
+### LinkedList
+
+`LinkedList` is a functional style immutable linked list implementation.
+
+It implements the standard Java `java.lang.Iterable` interface.
+
+`LinkedList` has a few static factory methods:
+
+```java
+LinkedList<String> emptyList = LinkedList.empty();
+
+LinkedList<String> singleElementList = LinkedList.of("I am a string");
+        
+LinkedList<String> ofSomeIterable = LinkedList.ofAll(List.of("A", "B", "C"));
+
+LinkedList<String> ofSomeStream == LinkedList.ofAll(Stream.of("A", "B", "C"));
+```
+
+Allows access to elements:
+
+```java
+String firstElement = linkedList.head();
+
+Optional<String> maybeFirstElement = linkedList.headerOptional();
+
+LinkedList<String> tail = linkedList.tail();
+
+boolean empty = linkedList.isEmpty();
+
+int size = linkedList.size();
+
+boolean contains = linkedList.contains("A");
+```
+
+Allows list manipulation (creating new immutable `LinkedList`, in every case):
+
+```java
+LinkedList<String> withNewElement = linkedList.add("Z");
+
+LinkedList<String> withOtherLinkedListElements = linkedList.add(otherLinkedList);
+
+LinkedList<String> withOtherIterableElements = linkedList.addAll(iterable);
+
+LinkedList<String> withoutFirstFiveElements = linkedList.traverseBackwards(5);
+```
+
+Has some Java Stream interop methods:
+
+```java
+Stream<String> stringStream = linkedList.stream();
+
+linkedList.forEach(System.out::println);
+```
+
+### MergedList
+
+`MergedList` is a collection extending standard Java `java.util.AbstractList`.
+It is a wrapper for multiple lists merged together.
+
+It stores given lists in an array of lists, utilising already instantiated lists, thus 
+avoiding creating copies.
+
+### TailCall
+
+`TailCall` is a structure allowing `StackOverflowError` avoidance in case of huge recursive calls. 
+It utilises a trick of storing next execution calls as objects on Heap, 
+instead of method calls on Stack.
+
+CAUTION: May be very ineffective. Not yet stress tested.
+
+Example usage:
+
+```java
+package acme;
+
+import com.tp.tools.function.data.LinkedList;
+import java.util.stream.Stream;
+
+public class Main {
+
+  public static void main(String[] args) {
+    LinkedList<Integer> seq = generateHugeLinkedList();
+    int lastElement = iterateToLastElementRecursively(seq);
+    System.out.println(lastElement); // prints last element (1 as set by generateHugeLinkedList() method)
+  }
+
+  private static int iterateToLastElementRecursively(LinkedList<Integer> list) {
+    if (list.isEmpty()) {
+      return TailCall.complete(-1);
+    } else if (list.size() == 1) {
+      return TailCall.complete(list.head());
+    } else {
+      return TailCall.next(() -> iterateToLastElementRecursively(list.tail()));
+    }
+  }
+
+  private static LinkedList<Integer> generateHugeLinkedList() {
+    AtomicInteger counter = new AtomicInteger();
+    return com.tp.tools.function.data.LinkedList.ofAll(
+        Stream.generate(counter::incrementAndGet)
+          .limit(100_000)
+    );
+  }
 }
 ```
 
