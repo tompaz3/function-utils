@@ -12,8 +12,9 @@ Features delivered by this library are:
 1. `Locker` - monadic type helping wrapping the code within a lock.
 1. `LinkedList` - functional linked list implementation.
 1. `MergedList` - list wrapper for merged list collection (created by merging multiple other lists).
+1. `CompareResult` - object handling comparing with `null` values.
 1. `TailCall` - tail call optimisation structure (probably very **inefficient**, not yet stress
-   tested).
+   tested). 
 
 Experimental / unstable
 
@@ -241,6 +242,96 @@ It is a wrapper for multiple lists merged together.
 
 It stores given lists in an array of lists, utilising already instantiated lists, thus 
 avoiding creating copies.
+
+### CompareResult
+
+`CompareResult` is a compare result wrapper with support for `null` values.
+It allows separating `null` and `non-null` comparison.
+
+Can be of type holding information about any compared value being `null`, 
+which can be accessed by one of the methods:
+* `boolean isLeftEmpty()` - `true` when only left value is `null`, `false` otherwise.
+* `boolean isRightEmpty()` - `true` when only right value is `null`, `false` otherwise.
+* `boolean isBothEmpty()` - `true` when both left and right are `null`, `false` otherwise.
+
+When no value was `null` and comparison result is valid, it can be checked by the method:
+* `boolean isValid()` - `true` when no value was `null` and instance holds a valid comparison result.
+`false` otherwise.
+
+Value can be accessed optionally, using the method:
+* `Optional<Integer> get()` - returns empty instance when any compared value is `null` 
+and non-empty instance, when both values are `non-null` and comparison is valid.
+
+Instance also provides method for `folding` in two ways:
+
+1\. Reacting on every instance type:
+```java
+public <T> T fold(
+  Supplier<? extends T> onLeftEmpty,
+  Supplier<? extends T> onRightEmpty,
+  Supplier<? extends T> onBothEmpty,
+  Function<? super Integer, ? extends T> onValid
+)
+```
+
+This functions calls given `Suppliers` or `Function` based on instance type.
+
+2\. Reacting with one `Supplier` for non-valid type and `Function` for valid type:
+```java
+public <T> T fold(
+  Supplier<? extends T> onInvalid,
+  Function<? super Integer, ? extends T> onValid
+)
+```
+
+#### Use examples
+
+```java
+// file
+public enum ProductPriority {
+  LOWEST(4),
+  LOW(3),
+  MODERATE(2),
+  HIGH(1),
+  HIGHEST(0);
+  
+  private final int order;
+  
+  ProductPriority(int order) {
+    this.order = order;
+  }
+  
+  public int order() {
+    return order;
+  }
+}
+// ---
+// file
+public record Type(String name, ProductPriority priority) {}
+// ---
+// file
+public record Product(String code, String name, Type type) {
+  public boolean isHigherPriorityTypeThan(Product other) {
+    return CompareResult.compare(this, other, Product::toProductPriorityComparable)
+            .fold(
+                    () -> false, // this has no priority
+                    () -> true,  // this has priority and other has none
+                    () -> false, // both have no priority
+                    result -> result > 0 // both have priority - verify comparison result
+            );
+  }
+  
+  private static Integer toProductPriorityComparable(Product product) {
+     return isNull(product.type())
+             ? null
+             : isNull(product.type())
+               ? null
+               : isNull(product.type().priority())
+                 ? null
+                 : product.type().priority().order();
+  }
+}
+```
 
 ### TailCall
 
