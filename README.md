@@ -13,6 +13,7 @@ Features delivered by this library are:
 1. `LinkedList` - functional linked list implementation.
 1. `MergedList` - list wrapper for merged list collection (created by merging multiple other lists).
 1. `CompareResult` - object handling comparing with `null` values.
+1. `FluentComparable` - interface extending `java.lang.Comparable` providing convenience comparison methods.
 1. `TailCall` - tail call optimisation structure (probably very **inefficient**, not yet stress
    tested). 
 
@@ -332,6 +333,20 @@ public record Product(String code, String name, Type type) {
   }
 }
 ```
+
+### FluentComparable
+
+This interface extends standard `java.lang.Comparable` providing some convenience methods.
+`FluentComparable` methods use `java.lang.Comparable#compare` method to execute comparisons
+and take advantage of `java.lang.Comparable` contract specification, creating results based on comparisons to the `0` integer.
+
+Convenience methods provided by this interface are:
+
+1. `isGreaterThan(T other)` - to check if this object is greater than the provided `other`.
+1. `isEqualTo(T other)` - to check if this object is equal to the provided `other`.
+1. `isLowerThan(T other)` - to check if this object is lower than the provided `other`.
+1. `isGreaterOrEqualTo(T other)` - to check if this object is greater than or equal to the provided `other`.
+1. `isLowerOrEqualTo(T other)` - to check if this object is lower than or equal to the provided `other`.
 
 ### TailCall
 
